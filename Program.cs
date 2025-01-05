@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-
+﻿namespace bw_path_finding;
 public class PathFinder
 {
     public (List<(int X, int Y)> path, (int X, int Y)? lastObstacle) FindNaturalPath((int X, int Y) start, (int X, int Y) end, List<(int X, int Y)> obstacles)
@@ -48,6 +45,37 @@ public class PathFinder
 
         return (path, null); // Move to the destination without encountering obstacles
     }
+
+    public List<(int X, int Y)> FilterValidEdges((int X, int Y) start, List<(int X, int Y)> edges, List<(int X, int Y)> obstacles)
+    {
+        var validEdges = new List<(int X, int Y)>();
+        var obstacleSet = new HashSet<(int X, int Y)>(obstacles);
+
+        foreach (var edge in edges)
+        {
+            // Test each edge without considering itself as an obstacle
+            var tempObstacles = new HashSet<(int X, int Y)>(obstacleSet);
+            tempObstacles.Remove(edge); // Temporarily exclude the edge from obstacles
+
+            // Check if the path to the edge is clear
+            var (_, lastObstacle) = FindNaturalPath(start, edge, [.. tempObstacles]);
+
+            if (!lastObstacle.HasValue)
+            {
+                validEdges.Add(edge); // Add edge if it is reachable
+            }
+        }
+
+        // Debugging: Output valid edges
+        Console.WriteLine("Filtered Valid Edges:");
+        foreach (var edge in validEdges)
+        {
+            Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
+        }
+
+        return validEdges;
+    }
+
 
     public List<(int X, int Y)> GetConnectedObstacles((int X, int Y) startTile, List<(int X, int Y)> obstacles)
     {
@@ -121,57 +149,6 @@ public class PathFinder
 
         return edges;
     }
-
-    public ((int X, int Y)? left, (int X, int Y)? right) FindDetourPoints((int X, int Y) start, List<(int X, int Y)> edges)
-    {
-        if (edges.Count == 0) return (null, null);
-
-        (int X, int Y)? leftMost = null;
-        (int X, int Y)? rightMost = null;
-        double maxLeftAngle = double.MinValue;
-        double minRightAngle = double.MaxValue;
-
-        foreach (var edge in edges)
-        {
-            int dx = edge.X - start.X;
-            int dy = edge.Y - start.Y;
-
-            // Debugging: Output dx, dy information
-            Console.WriteLine($"Edge: ({edge.X}, {edge.Y}), Start: ({start.X}, {start.Y}), dx: {dx}, dy: {dy}");
-
-            if (dx == 0 && dy == 0)
-            {
-                Console.WriteLine($"Edge: ({edge.X}, {edge.Y}) skipped: Same as start point.");
-                continue;
-            }
-
-            double angle = Math.Atan2(dy, dx);
-            double distance = dx * dx + dy * dy; // Calculate squared distance
-
-            // Debugging: Output angle and distance
-            Console.WriteLine($"Edge: ({edge.X}, {edge.Y}), Angle: {angle}, Distance: {distance}");
-
-            // Check for left boundary
-            if (angle > maxLeftAngle || (angle == maxLeftAngle && distance < dx * dx + dy * dy))
-            {
-                maxLeftAngle = angle;
-                leftMost = edge;
-            }
-
-            // Check for right boundary
-            if (angle < minRightAngle || (angle == minRightAngle && distance > dx * dx + dy * dy))
-            {
-                minRightAngle = angle;
-                rightMost = edge;
-            }
-        }
-
-        // Debugging: Output LeftMost and RightMost
-        Console.WriteLine($"LeftMost Angle: {maxLeftAngle}, RightMost Angle: {minRightAngle}");
-        Console.WriteLine($"LeftMost: {leftMost?.X}:{leftMost?.Y}, RightMost: {rightMost?.X}:{rightMost?.Y}");
-
-        return (leftMost, rightMost);
-    }
 }
 
 class Program
@@ -183,11 +160,11 @@ class Program
 
         var obstacles = new List<(int X, int Y)>
         {
-            (4, 7),     (5, 7),     (6, 7),
-            (4, 8),     (5, 8),     (6, 8),     (7, 8),
-            (4, 9),     (5, 9),     (6, 9),     (7, 9),
-            (4, 10),    (5, 10),    (6, 10),
-                                    (6, 11)
+                    (4, 7),     (5, 7),
+            (3, 8), (4, 8),     (5, 8),     (6, 8),     (7, 8),
+                    (4, 9),     (5, 9),     (6, 9),     (7, 9),
+                    (4, 10),    (5, 10),    (6, 10),
+                                            (6, 11)
         };
 
         var pathFinder = new PathFinder();
@@ -202,6 +179,7 @@ class Program
         {
             var connectedObstacles = pathFinder.GetConnectedObstacles(lastObstacle.Value, obstacles);
             edges = pathFinder.GetObstacleEdges(connectedObstacles);
+            edges = pathFinder.FilterValidEdges(start, edges, obstacles);
         }
 
         DisplayMap(size, start, goal, obstacles, path, edges);
