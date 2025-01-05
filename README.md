@@ -1,3 +1,5 @@
+![Untitled](https://github.com/user-attachments/assets/6bcb5de8-30b6-4366-b22c-4579ee4012c5)
+
 ## Research on a new method of pathfinding algorithm for performance improvement
 The existing A* algorithm is very well-known and has already been proven to deliver sufficiently good performance.  
 However, despite my limited skills and knowledge, I am challenging myself in this project to implement a pathfinding algorithm that performs far better than this.  
