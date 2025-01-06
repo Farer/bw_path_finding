@@ -1,7 +1,15 @@
 ﻿namespace bw_path_finding;
+
 public class PathFinder
 {
-    public (List<(int X, int Y)> path, (int X, int Y)? lastObstacle) FindNaturalPath((int X, int Y) start, (int X, int Y) end, List<(int X, int Y)> obstacles)
+    /// <summary>
+    /// Finds a natural path from the start point to the end point, stopping immediately upon encountering an obstacle.
+    /// </summary>
+    /// <param name="start">The starting point.</param>
+    /// <param name="end">The destination point.</param>
+    /// <param name="obstacles">A list of obstacle coordinates.</param>
+    /// <returns>A tuple containing the path taken before interruption (if any) and a list of valid edges around the encountered obstacle.</returns>
+    public (List<(int X, int Y)> path, List<(int X, int Y)> validEdges) FindNaturalPath((int X, int Y) start, (int X, int Y) end, List<(int X, int Y)> obstacles)
     {
         var path = new List<(int X, int Y)>();
         int x = start.X;
@@ -10,80 +18,61 @@ public class PathFinder
         int dx = Math.Abs(end.X - start.X);
         int dy = Math.Abs(end.Y - start.Y);
 
-        int sx = start.X < end.X ? 1 : -1; // Direction of X increment
-        int sy = start.Y < end.Y ? 1 : -1; // Direction of Y increment
+        int sx = start.X < end.X ? 1 : -1;
+        int sy = start.Y < end.Y ? 1 : -1;
 
-        int err = dx - dy; // Initial error value
+        int err = dx - dy;
+
+        HashSet<(int X, int Y)> obstacleSet = obstacles.ToHashSet();
 
         while (true)
         {
-            path.Add((x, y)); // Add current point to the path
+            path.Add((x, y));
 
-            if (obstacles.Contains((x, y)))
+            if (obstacleSet.Contains((x, y)))
             {
-                return (path, (x, y)); // Stop if an obstacle is reached
+                // When an obstacle is encountered, find all connected obstacles and their valid edges.
+                var connectedObstacles = GetConnectedObstacles((x, y), obstacles);
+                var obstacleEdges = GetObstacleEdges(connectedObstacles);
+                var validEdges = FilterValidEdgesFromObstacle(start, obstacleEdges, obstacleSet);
+                return (path, validEdges);
             }
 
             if (x == end.X && y == end.Y)
             {
-                break; // Stop if the destination point is reached
+                break;
             }
 
             int e2 = 2 * err;
-
             if (e2 > -dy)
             {
                 err -= dy;
-                x += sx; // Move in X direction
+                x += sx;
             }
             else if (e2 < dx)
             {
                 err += dx;
-                y += sy; // Move in Y direction
+                y += sy;
             }
         }
 
-        return (path, null); // Move to the destination without encountering obstacles
+        return (path, []);
     }
 
-    public List<(int X, int Y)> FilterValidEdges((int X, int Y) start, List<(int X, int Y)> edges, List<(int X, int Y)> obstacles)
-    {
-        var validEdges = new List<(int X, int Y)>();
-        var obstacleSet = new HashSet<(int X, int Y)>(obstacles);
-
-        foreach (var edge in edges)
-        {
-            // Test each edge without considering itself as an obstacle
-            var tempObstacles = new HashSet<(int X, int Y)>(obstacleSet);
-            tempObstacles.Remove(edge); // Temporarily exclude the edge from obstacles
-
-            // Check if the path to the edge is clear
-            var (_, lastObstacle) = FindNaturalPath(start, edge, [.. tempObstacles]);
-
-            if (!lastObstacle.HasValue)
-            {
-                validEdges.Add(edge); // Add edge if it is reachable
-            }
-        }
-
-        // Debugging: Output valid edges
-        Console.WriteLine("Filtered Valid Edges:");
-        foreach (var edge in validEdges)
-        {
-            Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
-        }
-
-        return validEdges;
-    }
-
-
+    /// <summary>
+    /// Gets all obstacles connected to the starting tile.
+    /// </summary>
+    /// <param name="startTile">The starting obstacle tile.</param>
+    /// <param name="obstacles">A list of all obstacle coordinates.</param>
+    /// <returns>A list of coordinates of connected obstacles.</returns>
     public List<(int X, int Y)> GetConnectedObstacles((int X, int Y) startTile, List<(int X, int Y)> obstacles)
     {
         var connected = new List<(int X, int Y)>();
         var visited = new HashSet<(int X, int Y)>();
         var queue = new Queue<(int X, int Y)>();
+        var obstacleSet = new HashSet<(int X, int Y)>(obstacles);
 
-        if (!obstacles.Contains(startTile)) return connected;
+        if (!obstacleSet.Contains(startTile)) return connected;
 
         queue.Enqueue(startTile);
         visited.Add(startTile);
@@ -103,23 +92,26 @@ public class PathFinder
 
             foreach (var neighbor in neighbors)
             {
-                if (obstacles.Contains(neighbor) && !visited.Contains(neighbor))
+                if (obstacleSet.Contains(neighbor) && !visited.Contains(neighbor))
                 {
                     queue.Enqueue(neighbor);
                     visited.Add(neighbor);
                 }
             }
         }
-
         Console.WriteLine("Connected Obstacles:");
         foreach (var tile in connected)
         {
             Console.WriteLine($"Obstacle: {tile.X}:{tile.Y}");
         }
-
         return connected;
     }
 
+    /// <summary>
+    /// Gets the edge tiles of a group of obstacles. An edge tile is an obstacle tile with at least one non-obstacle neighbor.
+    /// </summary>
+    /// <param name="obstacles">A list of obstacle coordinates.</param>
+    /// <returns>A list of edge tiles among the obstacles.</returns>
     public List<(int X, int Y)> GetObstacleEdges(List<(int X, int Y)> obstacles)
     {
         var edges = new List<(int X, int Y)>();
@@ -135,7 +127,8 @@ public class PathFinder
                 (tile.X + 1, tile.Y)
             };
 
-            if (neighbors.Exists(n => !obstacleSet.Contains(n)))
+            // Check if any neighbor is not an obstacle
+            if (neighbors.Any(n => !obstacleSet.Contains(n)))
             {
                 edges.Add(tile);
             }
@@ -147,7 +140,84 @@ public class PathFinder
             Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
         }
 
-        return edges;
+        return edges.Distinct().ToList(); // Remove duplicates
+    }
+
+    /// <summary>
+    /// Filters a list of potential edge tiles to find those that are reachable from the start point without hitting obstacles.
+    /// </summary>
+    /// <param name="start">The starting point.</param>
+    /// <param name="edges">A list of potential edge tiles.</param>
+    /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
+    /// <returns>A list of valid edge tiles reachable from the start point.</returns>
+    public List<(int X, int Y)> FilterValidEdgesFromObstacle((int X, int Y) start, List<(int X, int Y)> edges, HashSet<(int X, int Y)> obstacles)
+    {
+        var validEdges = new List<(int X, int Y)>();
+
+        foreach (var edge in edges)
+        {
+            if (IsReachable(start, edge, obstacles))
+            {
+                validEdges.Add(edge);
+            }
+        }
+        Console.WriteLine("Filtered Valid Edges:");
+        foreach (var edge in validEdges)
+        {
+            Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
+        }
+        return validEdges;
+    }
+
+    /// <summary>
+    /// Checks if the end point is reachable from the start point without crossing any obstacles.
+    /// </summary>
+    /// <param name="start">The starting point.</param>
+    /// <param name="end">The destination point.</param>
+    /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
+    /// <returns>True if the end point is reachable, false otherwise.</returns>
+    private bool IsReachable((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
+    {
+        int x = start.X;
+        int y = start.Y;
+
+        int dx = Math.Abs(end.X - start.X);
+        int dy = Math.Abs(end.Y - start.Y);
+
+        int sx = start.X < end.X ? 1 : -1;
+        int sy = start.Y < end.Y ? 1 : -1;
+
+        int err = dx - dy;
+
+        while (true)
+        {
+            if (obstacles.Contains((x, y)) && (x, y) != end)
+            {
+                return false;
+            }
+
+            if (x == end.X && y == end.Y)
+            {
+                return true;
+            }
+
+            int e2 = 2 * err;
+            if (e2 > -dy)
+            {
+                err -= dy;
+                x += sx;
+            }
+            else if (e2 < dx)
+            {
+                err += dx;
+                y += sy;
+            }
+            // Safety break to prevent infinite loops in unforeseen scenarios
+            if (Math.Abs(x - start.X) > Math.Abs(end.X - start.X) || Math.Abs(y - start.Y) > Math.Abs(end.Y - start.Y))
+            {
+                return false;
+            }
+        }
     }
 }
 
@@ -171,18 +241,9 @@ class Program
 
         var size = 15;
 
-        var (path, lastObstacle) = pathFinder.FindNaturalPath(start, goal, obstacles);
+        var (path, validEdges) = pathFinder.FindNaturalPath(start, goal, obstacles);
 
-        var edges = new List<(int X, int Y)>();
-
-        if (lastObstacle.HasValue)
-        {
-            var connectedObstacles = pathFinder.GetConnectedObstacles(lastObstacle.Value, obstacles);
-            edges = pathFinder.GetObstacleEdges(connectedObstacles);
-            edges = pathFinder.FilterValidEdges(start, edges, obstacles);
-        }
-
-        DisplayMap(size, start, goal, obstacles, path, edges);
+        DisplayMap(size, start, goal, obstacles, path, validEdges);
     }
 
     static void DisplayMap(int size, (int X, int Y) start, (int X, int Y) goal, List<(int X, int Y)> obstacles, List<(int X, int Y)> path, List<(int X, int Y)> edges)
@@ -205,6 +266,8 @@ class Program
 
         foreach (var point in edges)
             if (map[point.Y, point.X] == 'X')
+                map[point.Y, point.X] = 'O';
+            else if (map[point.Y, point.X] == '.')
                 map[point.Y, point.X] = 'O';
 
         for (int y = 0; y < size; y++)
