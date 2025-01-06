@@ -8,8 +8,8 @@ public class PathFinder
     /// <param name="start">The starting point.</param>
     /// <param name="end">The destination point.</param>
     /// <param name="obstacles">A list of obstacle coordinates.</param>
-    /// <returns>A tuple containing the path taken before interruption (if any) and a list of valid edges around the encountered obstacle.</returns>
-    public (List<(int X, int Y)> path, List<(int X, int Y)> validEdges) FindNaturalPath((int X, int Y) start, (int X, int Y) end, List<(int X, int Y)> obstacles)
+    /// <returns>A tuple containing the path taken before interruption (if any), a list of valid edges around the encountered obstacle, and the coordinates of the obstacle hit.</returns>
+    public (List<(int X, int Y)> path, List<(int X, int Y)> validEdges, (int X, int Y)? obstacleHit) FindNaturalPath((int X, int Y) start, (int X, int Y) end, List<(int X, int Y)> obstacles)
     {
         var path = new List<(int X, int Y)>();
         int x = start.X;
@@ -34,8 +34,8 @@ public class PathFinder
                 // When an obstacle is encountered, find all connected obstacles and their valid edges.
                 var connectedObstacles = GetConnectedObstacles((x, y), obstacles);
                 var obstacleEdges = GetObstacleEdges(connectedObstacles);
-                var validEdges = FilterValidEdgesFromObstacle(start, obstacleEdges, obstacleSet);
-                return (path, validEdges);
+                var validEdges = FilterValidEdgesFromObstacle(start, obstacleEdges, obstacleSet, (x, y)); // Pass the obstacle hit point
+                return (path, validEdges, (x, y));
             }
 
             if (x == end.X && y == end.Y)
@@ -56,11 +56,11 @@ public class PathFinder
             }
         }
 
-        return (path, []);
+        return (path, [], null);
     }
 
     /// <summary>
-    /// Gets all obstacles connected to the starting tile.
+    /// Gets all obstacles connected to the starting obstacle tile using Breadth-First Search (BFS).
     /// </summary>
     /// <param name="startTile">The starting obstacle tile.</param>
     /// <param name="obstacles">A list of all obstacle coordinates.</param>
@@ -144,17 +144,35 @@ public class PathFinder
     }
 
     /// <summary>
-    /// Filters a list of potential edge tiles to find those that are reachable from the start point without hitting obstacles.
+    /// Filters a list of potential edge tiles to find those that are reachable from the start point without hitting obstacles,
+    /// prioritizing edges that move towards the start point from the obstacle.
     /// </summary>
     /// <param name="start">The starting point.</param>
     /// <param name="edges">A list of potential edge tiles.</param>
     /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
+    /// <param name="obstacleHit">The coordinates of the obstacle that was hit.</param>
     /// <returns>A list of valid edge tiles reachable from the start point.</returns>
-    public List<(int X, int Y)> FilterValidEdgesFromObstacle((int X, int Y) start, List<(int X, int Y)> edges, HashSet<(int X, int Y)> obstacles)
+    public List<(int X, int Y)> FilterValidEdgesFromObstacle((int X, int Y) start, List<(int X, int Y)> edges, HashSet<(int X, int Y)> obstacles, (int X, int Y) obstacleHit)
     {
         var validEdges = new List<(int X, int Y)>();
 
-        foreach (var edge in edges)
+        // Sort edges based on their "towards the start" direction
+        var sortedEdges = edges.OrderBy(edge =>
+        {
+            // Prioritize edges closer to the start point
+            var diffXStart = Math.Abs(edge.X - start.X);
+            var diffYStart = Math.Abs(edge.Y - start.Y);
+
+            return diffXStart + diffYStart;
+        }).ToList();
+
+        Console.WriteLine("Sorted Edges:");
+        foreach (var edge in sortedEdges)
+        {
+            Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
+        }
+
+        foreach (var edge in sortedEdges)
         {
             if (IsReachable(start, edge, obstacles))
             {
@@ -170,7 +188,7 @@ public class PathFinder
     }
 
     /// <summary>
-    /// Checks if the end point is reachable from the start point without crossing any obstacles.
+    /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path.
     /// </summary>
     /// <param name="start">The starting point.</param>
     /// <param name="end">The destination point.</param>
@@ -241,7 +259,7 @@ class Program
 
         var size = 15;
 
-        var (path, validEdges) = pathFinder.FindNaturalPath(start, goal, obstacles);
+        var (path, validEdges, obstacleHit) = pathFinder.FindNaturalPath(start, goal, obstacles);
 
         DisplayMap(size, start, goal, obstacles, path, validEdges);
     }
