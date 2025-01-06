@@ -188,6 +188,75 @@ public class PathFinder
     }
 
     /// <summary>
+    /// Finds the two outermost valid edge coordinates from the perspective of the start point.
+    /// </summary>
+    /// <param name="start">The starting point.</param>
+    /// <param name="validEdges">A list of valid edge coordinates.</param>
+    /// <returns>A tuple containing the leftmost and rightmost edge coordinates, or null if fewer than two valid edges exist.</returns>
+    public ((int X, int Y), (int X, int Y))? FindOuterMostEdges((int X, int Y) start, List<(int X, int Y)> validEdges)
+    {
+        if (validEdges == null || validEdges.Count < 2)
+        {
+            return null; // Not enough valid edges to find outermost
+        }
+
+        // Calculate the angle from the start point to each valid edge.
+        var angles = validEdges.Select(edge => new
+        {
+            Edge = edge,
+            Angle = Math.Atan2(edge.Y - start.Y, edge.X - start.X)
+        }).ToList();
+
+        // Sort the angles in ascending order.
+        angles.Sort((a, b) => a.Angle.CompareTo(b.Angle));
+
+        // The first element in the sorted list will have the smallest angle (leftmost),
+        // and the last element will have the largest angle (rightmost).
+        var leftmost = angles.First().Edge;
+        var rightmost = angles.Last().Edge;
+
+        Console.WriteLine($"Leftmost Edge: {leftmost.X}:{leftmost.Y}");
+        Console.WriteLine($"Rightmost Edge: {rightmost.X}:{rightmost.Y}");
+
+        return (leftmost, rightmost);
+    }
+
+    public (int X, int Y) SelectBestDetourPoint((int X, int Y) goal, ((int X, int Y), (int X, int Y))? outerMostEdges)
+    {
+        if (outerMostEdges == null)
+        {
+            // 유효한 외곽선이 없는 경우에 대한 처리 (예외 처리 또는 기본값 반환)
+            throw new InvalidOperationException("No valid detour points available.");
+        }
+
+        var leftmost = outerMostEdges.Value.Item1;
+        var rightmost = outerMostEdges.Value.Item2;
+
+        // 각 후보 지점과 목표점 사이의 거리 계산 (유클리드 거리)
+        double distanceToLeft = CalculateDistance(leftmost, goal);
+        double distanceToRight = CalculateDistance(rightmost, goal);
+
+        if (distanceToLeft <= distanceToRight)
+        {
+            Console.WriteLine($"Selected Detour Point: {leftmost.X}:{leftmost.Y} (Leftmost)");
+            return leftmost;
+        }
+        else
+        {
+            Console.WriteLine($"Selected Detour Point: {rightmost.X}:{rightmost.Y} (Rightmost)");
+            return rightmost;
+        }
+    }
+
+    // 두 좌표 사이의 유클리드 거리 계산 헬퍼 함수
+    private double CalculateDistance((int X, int Y) p1, (int X, int Y) p2)
+    {
+        int dx = p1.X - p2.X;
+        int dy = p1.Y - p2.Y;
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    /// <summary>
     /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path.
     /// </summary>
     /// <param name="start">The starting point.</param>
@@ -243,8 +312,8 @@ class Program
 {
     static void Main()
     {
-        var start = (X: 0, Y: 0);
-        var goal = (X: 10, Y: 13);
+        var start = (X: 0, Y: 10);
+        var goal = (X: 13, Y: 14);
 
         var obstacles = new List<(int X, int Y)>
         {
@@ -261,7 +330,12 @@ class Program
 
         var (path, validEdges, obstacleHit) = pathFinder.FindNaturalPath(start, goal, obstacles);
 
-        DisplayMap(size, start, goal, obstacles, path, validEdges);
+        var OuterMostEdges = pathFinder.FindOuterMostEdges(start, validEdges);
+        var finalLocation = pathFinder.SelectBestDetourPoint(goal, OuterMostEdges);
+        var finalEdges = new List<(int X, int Y)>() {
+            finalLocation,
+        };
+        DisplayMap(size, start, goal, obstacles, path, finalEdges);
     }
 
     static void DisplayMap(int size, (int X, int Y) start, (int X, int Y) goal, List<(int X, int Y)> obstacles, List<(int X, int Y)> path, List<(int X, int Y)> edges)
