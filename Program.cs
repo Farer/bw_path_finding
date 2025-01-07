@@ -1,4 +1,6 @@
-﻿namespace bw_path_finding;
+﻿using System.Collections.Concurrent;
+
+namespace bw_path_finding;
 
 public class PathFinder
 {
@@ -67,27 +69,20 @@ public class PathFinder
     /// <returns>A set of coordinates of connected obstacles.</returns>
     public HashSet<(int X, int Y)> GetConnectedObstacles((int X, int Y) startTile, HashSet<(int X, int Y)> obstacles)
     {
-        if (!obstacles.Contains(startTile))
-        {
-            return [];
-        }
+        if (!obstacles.Contains(startTile)) return [];
 
-        var connectedObstacles = new HashSet<(int X, int Y)>();
+        var connectedObstacles = new HashSet<(int X, int Y)> { startTile };
         var queue = new Queue<(int X, int Y)>();
-
         queue.Enqueue(startTile);
-        connectedObstacles.Add(startTile);
 
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-
             foreach (var neighbor in GetAdjacentTiles(current))
             {
-                if (obstacles.Contains(neighbor) && !connectedObstacles.Contains(neighbor))
+                if (obstacles.Contains(neighbor) && connectedObstacles.Add(neighbor))
                 {
                     queue.Enqueue(neighbor);
-                    connectedObstacles.Add(neighbor);
                 }
             }
         }
@@ -132,15 +127,15 @@ public class PathFinder
     /// <returns>A list of valid detour points reachable from the start point.</returns>
     public List<(int X, int Y)> FilterValidDetourPoints((int X, int Y) start, List<(int X, int Y)> detourCandidates, HashSet<(int X, int Y)> obstacles)
     {
-        var validDetourPoints = new List<(int X, int Y)>();
-        foreach (var candidate in detourCandidates)
+        var validDetourPoints = new ConcurrentBag<(int X, int Y)>();
+        Parallel.ForEach(detourCandidates, candidate =>
         {
             if (IsReachable(start, candidate, obstacles))
             {
                 validDetourPoints.Add(candidate);
             }
-        }
-        return validDetourPoints;
+        });
+        return [.. validDetourPoints];
     }
 
     /// <summary>
@@ -304,6 +299,7 @@ class Program
         if (bestDetourPoint != (-1, -1))
         {
             optimalDetourPoint = pathFinder.FindOptimalDetourPoint(start, goal, bestDetourPoint, path, obstacles);
+            Console.WriteLine($"Optimal detour point: {optimalDetourPoint}");
         }
 
         List<(int X, int Y)>? finalEdges = bestDetourPoint != (-1, -1) ? [bestDetourPoint] : null;
