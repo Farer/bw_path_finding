@@ -9,7 +9,7 @@ public class PathFinder
     /// <param name="end">The destination point.</param>
     /// <param name="obstacles">A list of obstacle coordinates.</param>
     /// <returns>A tuple containing the path taken before interruption (if any), a list of valid edges around the encountered obstacle, and the coordinates of the obstacle hit.</returns>
-    public (List<(int X, int Y)> path, List<(int X, int Y)> validEdges, (int X, int Y)? obstacleHit) FindNaturalPath((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
+    public (List<(int X, int Y)> path, List<(int X, int Y)> validEdges) FindNaturalPath((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
     {
         var path = new List<(int X, int Y)>();
         int x = start.X;
@@ -35,7 +35,7 @@ public class PathFinder
                 var connectedObstacles = GetConnectedObstacles((x, y), obstacles);
                 var obstacleEdges = GetObstacleEdges(connectedObstacles);
                 var validEdges = FilterValidEdgesFromObstacle(start, obstacleEdges, obstacleSet, (x, y)); // Pass the obstacle hit point
-                return (path, validEdges, (x, y));
+                return (path, validEdges);
             }
 
             if (x == end.X && y == end.Y)
@@ -56,7 +56,7 @@ public class PathFinder
             }
         }
 
-        return (path, [], null);
+        return (path, []);
     }
 
     /// <summary>
@@ -391,7 +391,7 @@ class Program
 
         var size = 15;
 
-        var (path, validEdges, obstacleHit) = pathFinder.FindNaturalPath(start, goal, obstacles);
+        var (path, validEdges) = pathFinder.FindNaturalPath(start, goal, obstacles);
 
         var OuterMostEdges = pathFinder.FindOuterMostEdges(start, validEdges);
         var finalLocation = pathFinder.SelectBestDetourPoint(goal, OuterMostEdges);
