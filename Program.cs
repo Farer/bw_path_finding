@@ -159,10 +159,13 @@ public class PathFinder
     /// <returns>The optimal detour point, or null if none is found.</returns>
     public (int X, int Y)? FindOptimalDetourPoint((int X, int Y) start, (int X, int Y) goal, (int X, int Y) selectedEdge, List<(int X, int Y)> currentPath, HashSet<(int X, int Y)> obstacles)
     {
-        var potentialDetours = GetAdjacentTiles(selectedEdge)
-            .Where(tile => !obstacles.Contains(tile))
-            .Concat(currentPath.Where(point => !obstacles.Contains(point)))
-            .Distinct();
+        var potentialDetours = new HashSet<(int X, int Y)>(
+            GetAdjacentTiles(selectedEdge).Where(tile => !obstacles.Contains(tile))
+        );
+        foreach (var point in currentPath.Where(p => !obstacles.Contains(p)))
+        {
+            potentialDetours.Add(point);
+        }
 
         (int X, int Y)? bestDetour = null;
         double minDistanceToGoal = double.MaxValue;
