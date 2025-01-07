@@ -34,7 +34,7 @@ public class PathFinder
                 // Find all connected obstacles and their valid edges when an obstacle is encountered.
                 var connectedObstacles = GetConnectedObstacles((x, y), obstacles);
                 var obstacleEdges = GetObstacleEdges(connectedObstacles);
-                var validEdges = FilterValidEdgesFromObstacle(start, obstacleEdges, obstacleSet, (x, y)); // Pass the obstacle hit point
+                var validEdges = FilterValidEdgesFromObstacle(start, obstacleEdges, obstacleSet); // Pass the obstacle hit point
                 return (path, validEdges);
             }
 
@@ -135,9 +135,9 @@ public class PathFinder
         }
 
         Console.WriteLine("Detected Obstacle Edges:");
-        foreach (var edge in edges)
+        foreach (var (X, Y) in edges)
         {
-            Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
+            Console.WriteLine($"Edge: {X}:{Y}");
         }
 
         return edges.Distinct().ToList(); // Remove duplicates
@@ -150,9 +150,8 @@ public class PathFinder
     /// <param name="start">The starting point.</param>
     /// <param name="edges">A list of potential edge tiles.</param>
     /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
-    /// <param name="obstacleHit">The coordinates of the obstacle that was hit.</param>
     /// <returns>A list of valid edge tiles reachable from the start point.</returns>
-    public List<(int X, int Y)> FilterValidEdgesFromObstacle((int X, int Y) start, List<(int X, int Y)> edges, HashSet<(int X, int Y)> obstacles, (int X, int Y) obstacleHit)
+    public List<(int X, int Y)> FilterValidEdgesFromObstacle((int X, int Y) start, List<(int X, int Y)> edges, HashSet<(int X, int Y)> obstacles)
     {
         var validEdges = new List<(int X, int Y)>();
 
@@ -167,9 +166,9 @@ public class PathFinder
         }).ToList();
 
         Console.WriteLine("Sorted Edges:");
-        foreach (var edge in sortedEdges)
+        foreach (var (X, Y) in sortedEdges)
         {
-            Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
+            Console.WriteLine($"Edge: {X}:{Y}");
         }
 
         foreach (var edge in sortedEdges)
@@ -180,9 +179,9 @@ public class PathFinder
             }
         }
         Console.WriteLine("Filtered Valid Edges:");
-        foreach (var edge in validEdges)
+        foreach (var (X, Y) in validEdges)
         {
-            Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
+            Console.WriteLine($"Edge: {X}:{Y}");
         }
         return validEdges;
     }
@@ -403,8 +402,7 @@ class Program
         else {
             var optimalDetourPoint = pathFinder.FindOptimalDetourPoint(start, goal, finalLocation, path, obstacles);
 
-            List<(int X, int Y)> finalEdges = new List<(int X, int Y)>();
-            finalEdges.Add(finalLocation);
+            List<(int X, int Y)> finalEdges = [finalLocation];
             if (optimalDetourPoint.HasValue)
             {
                 finalEdges.Add(optimalDetourPoint.Value);
@@ -425,19 +423,19 @@ class Program
         map[start.Y, start.X] = 'S';
         map[goal.Y, goal.X] = 'E';
 
-        foreach (var obstacle in obstacles)
-            map[obstacle.Y, obstacle.X] = 'X';
+        foreach (var (X, Y) in obstacles)
+            map[Y, X] = 'X';
 
-        foreach (var point in path)
-            if (map[point.Y, point.X] == '.')
-                map[point.Y, point.X] = 'P';
+        foreach (var (X, Y) in path)
+            if (map[Y, X] == '.')
+                map[Y, X] = 'P';
 
         if(edges != null) {
-            foreach (var point in edges)
-                if (map[point.Y, point.X] == 'X')
-                    map[point.Y, point.X] = 'O';
-                else if (map[point.Y, point.X] == '.')
-                    map[point.Y, point.X] = 'O';
+            foreach (var (X, Y) in edges)
+                if (map[Y, X] == 'X')
+                    map[Y, X] = 'O';
+                else if (map[Y, X] == '.')
+                    map[Y, X] = 'O';
         }
 
         if (detourPoint.HasValue)
