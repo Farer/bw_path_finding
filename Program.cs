@@ -1,293 +1,210 @@
-﻿﻿namespace bw_path_finding;
+﻿namespace bw_path_finding;
 
 public class PathFinder
 {
     /// <summary>
-    /// Finds a natural path from the start point to the end point, stopping immediately upon encountering an obstacle.
+    /// Finds a path from the start point to the end point, stopping immediately upon encountering an obstacle.
     /// </summary>
     /// <param name="start">The starting point.</param>
     /// <param name="end">The destination point.</param>
-    /// <param name="obstacles">A list of obstacle coordinates.</param>
-    /// <returns>A tuple containing the path taken before interruption (if any), a list of valid edges around the encountered obstacle, and the coordinates of the obstacle hit.</returns>
-    public (List<(int X, int Y)> path, List<(int X, int Y)> validEdges) FindNaturalPath((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
+    /// <param name="obstacles">A set of obstacle coordinates.</param>
+    /// <returns>A tuple containing the path taken before interruption (if any),
+    /// a list of valid detour points around the encountered obstacle,
+    /// and the coordinates of the obstacle hit (if any).</returns>
+    public (List<(int X, int Y)> Path, List<(int X, int Y)> ValidDetourPoints, (int X, int Y)? ObstacleHit) FindPathUntilObstacle((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
     {
         var path = new List<(int X, int Y)>();
-        int x = start.X;
-        int y = start.Y;
+        int currentX = start.X;
+        int currentY = start.Y;
 
-        int dx = Math.Abs(end.X - start.X);
-        int dy = Math.Abs(end.Y - start.Y);
+        int deltaX = Math.Abs(end.X - start.X);
+        int deltaY = Math.Abs(end.Y - start.Y);
 
-        int sx = start.X < end.X ? 1 : -1;
-        int sy = start.Y < end.Y ? 1 : -1;
+        int stepX = start.X < end.X ? 1 : -1;
+        int stepY = start.Y < end.Y ? 1 : -1;
 
-        int err = dx - dy;
-
-        HashSet<(int X, int Y)> obstacleSet = obstacles.ToHashSet();
+        int error = deltaX - deltaY;
 
         while (true)
         {
-            path.Add((x, y));
+            path.Add((currentX, currentY));
 
-            if (obstacleSet.Contains((x, y)))
+            if (obstacles.Contains((currentX, currentY)))
             {
-                // Find all connected obstacles and their valid edges when an obstacle is encountered.
-                var connectedObstacles = GetConnectedObstacles((x, y), obstacles);
+                // Obstacle encountered, find valid detour points.
+                var connectedObstacles = GetConnectedObstacles((currentX, currentY), obstacles);
                 var obstacleEdges = GetObstacleEdges(connectedObstacles);
-                var validEdges = FilterValidEdgesFromObstacle(start, obstacleEdges, obstacleSet); // Pass the obstacle hit point
-                return (path, validEdges);
+                var validDetourPoints = FilterValidDetourPoints(start, obstacleEdges, obstacles);
+                return (path, validDetourPoints, (currentX, currentY));
             }
 
-            if (x == end.X && y == end.Y)
+            if (currentX == end.X && currentY == end.Y)
             {
                 break;
             }
 
-            int e2 = 2 * err;
-            if (e2 > -dy)
+            int doubleError = 2 * error;
+            if (doubleError > -deltaY)
             {
-                err -= dy;
-                x += sx;
+                error -= deltaY;
+                currentX += stepX;
             }
-            else if (e2 < dx)
+            else if (doubleError < deltaX)
             {
-                err += dx;
-                y += sy;
+                error += deltaX;
+                currentY += stepY;
             }
         }
 
-        return (path, []);
+        return (path, [], null); // Reached the end without hitting an obstacle
     }
 
     /// <summary>
     /// Gets all obstacles connected to the starting obstacle tile using Breadth-First Search (BFS).
     /// </summary>
     /// <param name="startTile">The starting obstacle tile.</param>
-    /// <param name="obstacles">A list of all obstacle coordinates.</param>
-    /// <returns>A list of coordinates of connected obstacles.</returns>
-    public List<(int X, int Y)> GetConnectedObstacles((int X, int Y) startTile, HashSet<(int X, int Y)> obstacles)
+    /// <param name="obstacles">A set of all obstacle coordinates.</param>
+    /// <returns>A set of coordinates of connected obstacles.</returns>
+    public HashSet<(int X, int Y)> GetConnectedObstacles((int X, int Y) startTile, HashSet<(int X, int Y)> obstacles)
     {
-        var connected = new List<(int X, int Y)>();
-        var visited = new HashSet<(int X, int Y)>();
-        var queue = new Queue<(int X, int Y)>();
-        var obstacleSet = new HashSet<(int X, int Y)>(obstacles);
+        if (!obstacles.Contains(startTile))
+        {
+            return [];
+        }
 
-        if (!obstacleSet.Contains(startTile)) return connected;
+        var connectedObstacles = new HashSet<(int X, int Y)>();
+        var queue = new Queue<(int X, int Y)>();
 
         queue.Enqueue(startTile);
-        visited.Add(startTile);
+        connectedObstacles.Add(startTile);
 
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-            connected.Add(current);
 
-            var neighbors = new List<(int X, int Y)>
+            foreach (var neighbor in GetAdjacentTiles(current))
             {
-                (current.X - 1, current.Y),
-                (current.X + 1, current.Y),
-                (current.X, current.Y - 1),
-                (current.X, current.Y + 1)
-            };
-
-            foreach (var neighbor in neighbors)
-            {
-                if (obstacleSet.Contains(neighbor) && !visited.Contains(neighbor))
+                if (obstacles.Contains(neighbor) && !connectedObstacles.Contains(neighbor))
                 {
                     queue.Enqueue(neighbor);
-                    visited.Add(neighbor);
+                    connectedObstacles.Add(neighbor);
                 }
             }
         }
-        Console.WriteLine("Connected Obstacles:");
-        foreach (var tile in connected)
-        {
-            Console.WriteLine($"Obstacle: {tile.X}:{tile.Y}");
-        }
-        return connected;
+        return connectedObstacles;
+    }
+
+    private static IEnumerable<(int X, int Y)> GetAdjacentTiles((int X, int Y) tile)
+    {
+        yield return (tile.X - 1, tile.Y);
+        yield return (tile.X + 1, tile.Y);
+        yield return (tile.X, tile.Y - 1);
+        yield return (tile.X, tile.Y + 1);
     }
 
     /// <summary>
     /// Gets the edge tiles of a group of obstacles. An edge tile is an obstacle tile with at least one non-obstacle neighbor.
     /// </summary>
-    /// <param name="obstacles">A list of obstacle coordinates.</param>
+    /// <param name="obstacles">A collection of obstacle coordinates.</param>
     /// <returns>A list of edge tiles among the obstacles.</returns>
-    public List<(int X, int Y)> GetObstacleEdges(List<(int X, int Y)> obstacles)
+    public List<(int X, int Y)> GetObstacleEdges(IEnumerable<(int X, int Y)> obstacles)
     {
-        var edges = new List<(int X, int Y)>();
         var obstacleSet = new HashSet<(int X, int Y)>(obstacles);
+        var edges = new List<(int X, int Y)>();
 
         foreach (var tile in obstacles)
         {
-            var neighbors = new List<(int X, int Y)>
-            {
-                (tile.X, tile.Y - 1),
-                (tile.X, tile.Y + 1),
-                (tile.X - 1, tile.Y),
-                (tile.X + 1, tile.Y)
-            };
-
-            // Check if any neighbor is not an obstacle
-            if (neighbors.Any(n => !obstacleSet.Contains(n)))
+            if (GetAdjacentTiles(tile).Any(neighbor => !obstacleSet.Contains(neighbor)))
             {
                 edges.Add(tile);
             }
         }
 
-        Console.WriteLine("Detected Obstacle Edges:");
-        foreach (var (X, Y) in edges)
-        {
-            Console.WriteLine($"Edge: {X}:{Y}");
-        }
-
-        return edges.Distinct().ToList(); // Remove duplicates
+        return edges.Distinct().ToList();
     }
 
     /// <summary>
-    /// Filters a list of potential edge tiles to find those that are reachable from the start point without hitting obstacles,
-    /// prioritizing edges that move towards the start point from the obstacle.
+    /// Filters a list of potential detour points to find those that are reachable from the start point without hitting obstacles.
     /// </summary>
     /// <param name="start">The starting point.</param>
-    /// <param name="edges">A list of potential edge tiles.</param>
+    /// <param name="detourCandidates">A list of potential detour points.</param>
     /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
-    /// <returns>A list of valid edge tiles reachable from the start point.</returns>
-    public List<(int X, int Y)> FilterValidEdgesFromObstacle((int X, int Y) start, List<(int X, int Y)> edges, HashSet<(int X, int Y)> obstacles)
+    /// <returns>A list of valid detour points reachable from the start point.</returns>
+    public List<(int X, int Y)> FilterValidDetourPoints((int X, int Y) start, List<(int X, int Y)> detourCandidates, HashSet<(int X, int Y)> obstacles)
     {
-        var validEdges = new List<(int X, int Y)>();
-
-        // Sort edges based on their "towards the start" direction
-        var sortedEdges = edges.OrderBy(edge =>
+        var validDetourPoints = new List<(int X, int Y)>();
+        foreach (var candidate in detourCandidates)
         {
-            // Prioritize edges closer to the start point
-            var diffXStart = Math.Abs(edge.X - start.X);
-            var diffYStart = Math.Abs(edge.Y - start.Y);
-
-            return diffXStart + diffYStart;
-        }).ToList();
-
-        Console.WriteLine("Sorted Edges:");
-        foreach (var (X, Y) in sortedEdges)
-        {
-            Console.WriteLine($"Edge: {X}:{Y}");
-        }
-
-        foreach (var edge in sortedEdges)
-        {
-            if (IsReachable(start, edge, obstacles))
+            if (IsReachable(start, candidate, obstacles))
             {
-                validEdges.Add(edge);
+                validDetourPoints.Add(candidate);
             }
         }
-        Console.WriteLine("Filtered Valid Edges:");
-        foreach (var (X, Y) in validEdges)
-        {
-            Console.WriteLine($"Edge: {X}:{Y}");
-        }
-        return validEdges;
+        return validDetourPoints;
     }
 
     /// <summary>
-    /// Finds the two outermost valid edge coordinates from the perspective of the start point.
+    /// Finds the two outermost valid detour points from the perspective of the start point based on the angle.
     /// </summary>
     /// <param name="start">The starting point.</param>
-    /// <param name="validEdges">A list of valid edge coordinates.</param>
-    /// <returns>A tuple containing the leftmost and rightmost edge coordinates, or null if fewer than two valid edges exist.</returns>
-    public ((int X, int Y), (int X, int Y))? FindOuterMostEdges((int X, int Y) start, List<(int X, int Y)> validEdges)
+    /// <param name="validDetourPoints">A list of valid detour points.</param>
+    /// <returns>A tuple containing the leftmost and rightmost detour points, or null if fewer than two valid detour points exist.</returns>
+    public ((int X, int Y), (int X, int Y))? FindOuterMostDetourPoints((int X, int Y) start, List<(int X, int Y)> validDetourPoints)
     {
-        if (validEdges == null || validEdges.Count < 2)
+        if (validDetourPoints == null || validDetourPoints.Count < 2)
         {
-            return null; // Not enough valid edges to find outermost
+            return null;
         }
 
-        // Calculate the angle from the start point to each valid edge.
-        var angles = validEdges.Select(edge => new
-        {
-            Edge = edge,
-            Angle = Math.Atan2(edge.Y - start.Y, edge.X - start.X)
-        }).ToList();
+        var angles = validDetourPoints
+            .Select(point => new { Point = point, Angle = Math.Atan2(point.Y - start.Y, point.X - start.X) })
+            .OrderBy(item => item.Angle)
+            .ToList();
 
-        // Sort the angles in ascending order.
-        angles.Sort((a, b) => a.Angle.CompareTo(b.Angle));
-
-        // The first element in the sorted list will have the smallest angle (leftmost),
-        // and the last element will have the largest angle (rightmost).
-        var leftmost = angles.First().Edge;
-        var rightmost = angles.Last().Edge;
-
-        Console.WriteLine($"Leftmost Edge: {leftmost.X}:{leftmost.Y}");
-        Console.WriteLine($"Rightmost Edge: {rightmost.X}:{rightmost.Y}");
-
-        return (leftmost, rightmost);
+        return (angles.First().Point, angles.Last().Point);
     }
 
-    public (int X, int Y) SelectBestDetourPoint((int X, int Y) goal, ((int X, int Y), (int X, int Y))? outerMostEdges)
+    /// <summary>
+    /// Selects the best detour point based on the distance to the goal.
+    /// </summary>
+    /// <param name="goal">The goal point.</param>
+    /// <param name="outerMostDetourPoints">The outermost detour points.</param>
+    /// <returns>The selected detour point.</returns>
+    public (int X, int Y) SelectBestDetourPoint((int X, int Y) goal, ((int X, int Y), (int X, int Y))? outerMostDetourPoints)
     {
-        if (outerMostEdges == null)
+        if (outerMostDetourPoints == null)
         {
-            // Handle cases where there are no valid outer edges.
-            return (-1, -1);
+            return (-1, -1); // Indicate no valid detour points
         }
 
-        var leftmost = outerMostEdges.Value.Item1;
-        var rightmost = outerMostEdges.Value.Item2;
+        double distanceToLeft = CalculateDistance(outerMostDetourPoints.Value.Item1, goal);
+        double distanceToRight = CalculateDistance(outerMostDetourPoints.Value.Item2, goal);
 
-        // Calculate distances from candidates to the goal.
-        double distanceToLeft = CalculateDistance(leftmost, goal);
-        double distanceToRight = CalculateDistance(rightmost, goal);
-
-        if (distanceToLeft <= distanceToRight)
-        {
-            Console.WriteLine($"Selected Detour Point: {leftmost.X}:{leftmost.Y} (Leftmost)");
-            return leftmost;
-        }
-        else
-        {
-            Console.WriteLine($"Selected Detour Point: {rightmost.X}:{rightmost.Y} (Rightmost)");
-            return rightmost;
-        }
+        return distanceToLeft <= distanceToRight ? outerMostDetourPoints.Value.Item1 : outerMostDetourPoints.Value.Item2;
     }
 
+    /// <summary>
+    /// Finds an optimal detour point near the selected edge that is reachable from the start and closer to the goal.
+    /// </summary>
+    /// <param name="start">The starting point.</param>
+    /// <param name="goal">The goal point.</param>
+    /// <param name="selectedEdge">The selected edge point.</param>
+    /// <param name="currentPath">The current path taken.</param>
+    /// <param name="obstacles">The set of obstacles.</param>
+    /// <returns>The optimal detour point, or null if none is found.</returns>
     public (int X, int Y)? FindOptimalDetourPoint((int X, int Y) start, (int X, int Y) goal, (int X, int Y) selectedEdge, List<(int X, int Y)> currentPath, HashSet<(int X, int Y)> obstacles)
     {
-        var obstacleSet = new HashSet<(int X, int Y)>(obstacles);
-        var potentialDetours = new List<(int X, int Y)>();
-
-        // Explore 8 neighboring tiles (including diagonals).
-        var neighbors = new List<(int X, int Y)>
-        {
-            (selectedEdge.X - 1, selectedEdge.Y - 1),
-            (selectedEdge.X - 1, selectedEdge.Y),
-            (selectedEdge.X - 1, selectedEdge.Y + 1),
-            (selectedEdge.X, selectedEdge.Y - 1),
-            (selectedEdge.X, selectedEdge.Y + 1),
-            (selectedEdge.X + 1, selectedEdge.Y - 1),
-            (selectedEdge.X + 1, selectedEdge.Y),
-            (selectedEdge.X + 1, selectedEdge.Y + 1)
-        };
-
-        // Include points from the current path as candidates.
-        foreach (var pathPoint in currentPath)
-        {
-            if (!potentialDetours.Contains(pathPoint) && !obstacleSet.Contains(pathPoint))
-            {
-                potentialDetours.Add(pathPoint);
-            }
-        }
-
-        foreach (var neighbor in neighbors)
-        {
-            if (!obstacleSet.Contains(neighbor)) // Check if not an obstacle.
-            {
-                potentialDetours.Add(neighbor);
-            }
-        }
+        var potentialDetours = GetAdjacentTiles(selectedEdge)
+            .Where(tile => !obstacles.Contains(tile))
+            .Concat(currentPath.Where(point => !obstacles.Contains(point)))
+            .Distinct();
 
         (int X, int Y)? bestDetour = null;
         double minDistanceToGoal = double.MaxValue;
 
-        foreach (var detour in potentialDetours.Distinct())
+        foreach (var detour in potentialDetours)
         {
-            if (IsReachable(start, detour, obstacleSet))
+            if (IsReachable(start, detour, obstacles))
             {
                 double distanceToGoal = CalculateDistance(detour, goal);
                 if (distanceToGoal < minDistanceToGoal)
@@ -298,20 +215,11 @@ public class PathFinder
             }
         }
 
-        if (bestDetour != null)
-        {
-            Console.WriteLine($"Optimal Detour Point: {bestDetour.Value.X}:{bestDetour.Value.Y}");
-        }
-        else
-        {
-            Console.WriteLine("No optimal detour point found.");
-        }
-
         return bestDetour;
     }
 
     // Helper function to calculate Euclidean distance between two points.
-    private double CalculateDistance((int X, int Y) p1, (int X, int Y) p2)
+    private static double CalculateDistance((int X, int Y) p1, (int X, int Y) p2)
     {
         int dx = p1.X - p2.X;
         int dy = p1.Y - p2.Y;
@@ -319,7 +227,7 @@ public class PathFinder
     }
 
     /// <summary>
-    /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path.
+    /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path (Bresenham's line algorithm).
     /// </summary>
     /// <param name="start">The starting point.</param>
     /// <param name="end">The destination point.</param>
@@ -329,13 +237,10 @@ public class PathFinder
     {
         int x = start.X;
         int y = start.Y;
-
         int dx = Math.Abs(end.X - start.X);
         int dy = Math.Abs(end.Y - start.Y);
-
         int sx = start.X < end.X ? 1 : -1;
         int sy = start.Y < end.Y ? 1 : -1;
-
         int err = dx - dy;
 
         while (true)
@@ -361,8 +266,9 @@ public class PathFinder
                 err += dx;
                 y += sy;
             }
-            // Safety break to prevent infinite loops in unforeseen scenarios
-            if (Math.Abs(x - start.X) > Math.Abs(end.X - start.X) || Math.Abs(y - start.Y) > Math.Abs(end.Y - start.Y))
+
+            // Safety break
+            if (Math.Abs(x - start.X) > Math.Abs(end.X - start.X) + 1 || Math.Abs(y - start.Y) > Math.Abs(end.Y - start.Y) + 1)
             {
                 return false;
             }
@@ -379,74 +285,83 @@ class Program
 
         var obstacles = new HashSet<(int X, int Y)>
         {
-                    (6, 7),     (7, 7),
-            (5, 8), (6, 8),     (7, 8),     (8, 8),     (9, 8),
-                    (6, 9),     (7, 9),     (8, 9),     (9, 9),
-                    (6, 10),    (7, 10),    (8, 10),
-                                            (8, 11)
+                (6, 7),     (7, 7),
+        (5, 8), (6, 8),     (7, 8),     (8, 8),     (9, 8),
+                (6, 9),     (7, 9),     (8, 9),     (9, 9),
+                (6, 10),    (7, 10),    (8, 10),
+                                        (8, 11)
         };
 
         var pathFinder = new PathFinder();
+        var mapSize = 15;
 
-        var size = 15;
+        var (path, validDetourPoints, _) = pathFinder.FindPathUntilObstacle(start, goal, obstacles);
 
-        var (path, validEdges) = pathFinder.FindNaturalPath(start, goal, obstacles);
+        var outerMostDetourPoints = pathFinder.FindOuterMostDetourPoints(start, validDetourPoints);
+        var bestDetourPoint = pathFinder.SelectBestDetourPoint(goal, outerMostDetourPoints);
 
-        var OuterMostEdges = pathFinder.FindOuterMostEdges(start, validEdges);
-        var finalLocation = pathFinder.SelectBestDetourPoint(goal, OuterMostEdges);
-        if(finalLocation == (-1, -1))
+        (int X, int Y)? optimalDetourPoint = null;
+        if (bestDetourPoint != (-1, -1))
         {
-            DisplayMap(size, start, goal, obstacles, path, null, null);
-            return;
+            optimalDetourPoint = pathFinder.FindOptimalDetourPoint(start, goal, bestDetourPoint, path, obstacles);
         }
-        else {
-            var optimalDetourPoint = pathFinder.FindOptimalDetourPoint(start, goal, finalLocation, path, obstacles);
 
-            List<(int X, int Y)> finalEdges = [finalLocation];
-            if (optimalDetourPoint.HasValue)
-            {
-                finalEdges.Add(optimalDetourPoint.Value);
-            }
+        List<(int X, int Y)>? finalEdges = bestDetourPoint != (-1, -1) ? [bestDetourPoint] : null;
 
-            DisplayMap(size, start, goal, obstacles, path, finalEdges, optimalDetourPoint);
-        }
+        DisplayMap(mapSize, start, goal, obstacles, path, finalEdges, optimalDetourPoint);
     }
 
     static void DisplayMap(int size, (int X, int Y) start, (int X, int Y) goal, HashSet<(int X, int Y)> obstacles, List<(int X, int Y)> path, List<(int X, int Y)>? edges, (int X, int Y)? detourPoint)
     {
         char[,] map = new char[size, size];
 
-        for (int i = 0; i < size; i++)
-            for (int j = 0; j < size; j++)
-                map[i, j] = '.';
+        // Initialize map with empty spaces
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                map[y, x] = '.';
+            }
+        }
 
         map[start.Y, start.X] = 'S';
         map[goal.Y, goal.X] = 'E';
 
         foreach (var (X, Y) in obstacles)
-            map[Y, X] = 'X';
+        {
+            if (Y >= 0 && Y < size && X >= 0 && X < size)
+                map[Y, X] = 'X';
+        }
 
         foreach (var (X, Y) in path)
-            if (map[Y, X] == '.')
+        {
+            if (Y >= 0 && Y < size && X >= 0 && X < size && map[Y, X] == '.')
                 map[Y, X] = 'P';
+        }
 
-        if(edges != null) {
+        if (edges != null)
+        {
             foreach (var (X, Y) in edges)
-                if (map[Y, X] == 'X')
+            {
+                if (Y >= 0 && Y < size && X >= 0 && X < size)
+                {
                     map[Y, X] = 'O';
-                else if (map[Y, X] == '.')
-                    map[Y, X] = 'O';
+                }
+            }
         }
 
         if (detourPoint.HasValue)
         {
-            map[detourPoint.Value.Y, detourPoint.Value.X] = 'D';
+            if (detourPoint.Value.Y >= 0 && detourPoint.Value.Y < size && detourPoint.Value.X >= 0 && detourPoint.Value.X < size)
+                map[detourPoint.Value.Y, detourPoint.Value.X] = 'D';
         }
 
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
+            {
                 Console.Write(map[y, x] + " ");
+            }
             Console.WriteLine();
         }
     }
