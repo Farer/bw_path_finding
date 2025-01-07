@@ -13,7 +13,7 @@ public class PathFinder
     /// <returns>A tuple containing the path taken before interruption (if any),
     /// a list of valid detour points around the encountered obstacle,
     /// and the coordinates of the obstacle hit (if any).</returns>
-    public (List<(int X, int Y)> Path, List<(int X, int Y)> ValidDetourPoints, (int X, int Y)? ObstacleHit) FindPathUntilObstacle((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
+    public (List<(int X, int Y)> Path, List<(int X, int Y)> ValidDetourPoints) FindPathUntilObstacle((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
     {
         var path = new List<(int X, int Y)>();
         int currentX = start.X;
@@ -37,7 +37,7 @@ public class PathFinder
                 var connectedObstacles = GetConnectedObstacles((currentX, currentY), obstacles);
                 var obstacleEdges = GetObstacleEdges(connectedObstacles);
                 var validDetourPoints = FilterValidDetourPoints(start, obstacleEdges, obstacles);
-                return (path, validDetourPoints, (currentX, currentY));
+                return (path, validDetourPoints);
             }
 
             if (currentX == end.X && currentY == end.Y)
@@ -58,7 +58,7 @@ public class PathFinder
             }
         }
 
-        return (path, [], null); // Reached the end without hitting an obstacle
+        return (path, []); // Reached the end without hitting an obstacle
     }
 
     /// <summary>
@@ -290,7 +290,7 @@ class Program
         var pathFinder = new PathFinder();
         var mapSize = 15;
 
-        var (path, validDetourPoints, _) = pathFinder.FindPathUntilObstacle(start, goal, obstacles);
+        var (path, validDetourPoints) = pathFinder.FindPathUntilObstacle(start, goal, obstacles);
 
         var outerMostDetourPoints = pathFinder.FindOuterMostDetourPoints(start, validDetourPoints);
         var bestDetourPoint = pathFinder.SelectBestDetourPoint(goal, outerMostDetourPoints);
