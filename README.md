@@ -1,4 +1,6 @@
-![Untitled](https://github.com/user-attachments/assets/6bcb5de8-30b6-4366-b22c-4579ee4012c5)
+![image](https://github.com/user-attachments/assets/89324097-1e06-4ad0-b33b-834a2adf2b11)
+![image](https://github.com/user-attachments/assets/e9809433-e218-47bb-a24f-3201c95cd14b)
+![image](https://github.com/user-attachments/assets/994342d6-3561-4414-8298-9f20f7bbae6d)
 
 ## Research on a new method of pathfinding algorithm for performance improvement
 The existing A* algorithm is very well-known and has already been proven to deliver sufficiently good performance.  
@@ -16,4 +18,4 @@ The basic approach is as follows:
 7. Ultimately, the path is constructed like this: (starting point, waypoint1, waypoint2, ..., waypoint3, destination).  
 
 This is fundamentally the same concept as the ray concept used in 3D engines.  
-However, since I am working in a 2D context and diagonal movement is not allowed, I only made slight adjustments.  
+However, since I am working in a 2D context and diagonal movement is not allowed, I only made slight adjustments.
