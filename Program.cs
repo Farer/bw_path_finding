@@ -375,18 +375,16 @@ class Program
 {
     static void Main()
     {
-        // var start = (X: 0, Y: 10);
-        // var start = (X: 3, Y: 11);
-        var start = (X: 5, Y: 12);
+        var start = (X: 0, Y: 0);
         var goal = (X: 13, Y: 14);
 
         var obstacles = new HashSet<(int X, int Y)>
         {
-                    (4, 7),     (5, 7),
-            (3, 8), (4, 8),     (5, 8),     (6, 8),     (7, 8),
-                    (4, 9),     (5, 9),     (6, 9),     (7, 9),
-                    (4, 10),    (5, 10),    (6, 10),
-                                            (6, 11)
+                    (6, 7),     (7, 7),
+            (5, 8), (6, 8),     (7, 8),     (8, 8),     (9, 8),
+                    (6, 9),     (7, 9),     (8, 9),     (9, 9),
+                    (6, 10),    (7, 10),    (8, 10),
+                                            (8, 11)
         };
 
         var pathFinder = new PathFinder();
