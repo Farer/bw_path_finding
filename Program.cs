@@ -248,7 +248,7 @@ class Program
 {
     static void Main()
     {
-        var start = (X: 0, Y: 0); var goal = (X: 13, Y: 14);
+        var start = (X: 0, Y: 0); var goal = (X: 0, Y: 14);
         // var start = (X: 0, Y: 0); var goal = (X: 8, Y: 6);
         // var start = (X: 8, Y: 6); var goal = (X: 13, Y: 14);
         // var start = (X: 8, Y: 6); var goal = (X: 10, Y: 7);
@@ -256,11 +256,11 @@ class Program
 
         var obstacles = new HashSet<(int X, int Y)>
         {
-                (6, 6),     (7, 6),
-        (5, 7), (6, 7),     (7, 7),     (8, 7),     (9, 7),
-                (6, 8),     (7, 8),     (8, 8),     (9, 8),
-                (6, 9),     (7, 9),     (8, 9),
-                                        (8, 10)
+                (1, 6),     (2, 6),
+        (0, 7), (1, 7),     (2, 7),     (3, 7),     (4, 7),
+                (1, 8),     (2, 8),     (3, 8),     (4, 8),
+                (1, 9),     (2, 9),     (3, 9),
+                                        (3, 10)
         };
 
         var pathFinder = new PathFinder();
