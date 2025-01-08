@@ -15,7 +15,14 @@ The basic approach is as follows:
 4. Among the outline information, select the optimal point for bypassing the obstacle. (This part is the core)  
 5. Combine the starting point and the bypass point to create a kind of waypoint coordinate.  
 6. Subsequently, repeat the same process from the bypass point to the destination.  
-7. Ultimately, the path is constructed like this: (starting point, waypoint1, waypoint2, ..., waypointN, destination).  
+7. Ultimately, the path is constructed like this: (starting point, waypoint1, waypoint2, ..., waypointN, destination).
+
+*Update* 2025.1.8
+1. Detect a collision with an obstacle on the straight path connecting the starting point and the destination.
+2. Decide which direction to explore along the obstacle's outline (for now, the side closer to the destination).
+3. If the end of the visible outline is reached, search for an appropriate detour point around that outline.
+4. Select a detour point where a straight-line movement from the starting point avoids the obstacle, preferably closer to the destination.
+5. If the first detour point selection fails, I plan to search in the opposite direction along the outline where the obstacle was first encountered.
 
 This is fundamentally the same concept as the ray concept used in 3D engines.  
 However, since I am working in a 2D context and diagonal movement is not allowed, I only made slight adjustments.
