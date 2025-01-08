@@ -15,7 +15,7 @@ The basic approach is as follows:
 4. Among the outline information, select the optimal point for bypassing the obstacle. (This part is the core)  
 5. Combine the starting point and the bypass point to create a kind of waypoint coordinate.  
 6. Subsequently, repeat the same process from the bypass point to the destination.  
-7. Ultimately, the path is constructed like this: (starting point, waypoint1, waypoint2, ..., waypoint3, destination).  
+7. Ultimately, the path is constructed like this: (starting point, waypoint1, waypoint2, ..., waypointN, destination).  
 
 This is fundamentally the same concept as the ray concept used in 3D engines.  
 However, since I am working in a 2D context and diagonal movement is not allowed, I only made slight adjustments.
