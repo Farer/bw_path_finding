@@ -368,6 +368,8 @@ class Program
         // var start = (X: 5, Y: 7); var goal = (X: 0, Y: 14);
         // var start = (X: 5, Y: 8); var goal = (X: 0, Y: 14);
         var start = (X: 5, Y: 9); var goal = (X: 0, Y: 14);
+        // var start = (X: 4, Y: 10); var goal = (X: 0, Y: 14);
+        // var start = (X: 4, Y: 11); var goal = (X: 0, Y: 14);
 
         // var start = (X: 0, Y: 0); var goal = (X: 8, Y: 6);
         // var start = (X: 8, Y: 6); var goal = (X: 13, Y: 14);
