@@ -59,7 +59,7 @@ public class AnyaPathfinding
         var directions = new (int dx, int dy)[]
         {
             (-1, 0), (1, 0), (0, -1), (0, 1), // Cardinal
-            (-1, -1), (-1, 1), (1, -1), (1, 1) // Diagonal
+            // (-1, -1), (-1, 1), (1, -1), (1, 1) // Diagonal
         };
 
         foreach (var (dx, dy) in directions)
