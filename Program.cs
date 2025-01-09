@@ -80,12 +80,13 @@ public class PathFinder
             int mapSize = 15
         )
     {
-        var validDetourPoints = new List<(int X, int Y)>();
+        var validEdgePoints = new List<(int X, int Y)>();
         var visitedEdges = new HashSet<(int X, int Y)>();
         var queue = new Queue<(int X, int Y)>();
 
         // Add the exterior tiles of the first encountered obstacle to the queue.
-        foreach (var neighbor in GetAdjacentTiles(obstacleHit))
+        var adjacentTiles = GetAdjacentTiles(obstacleHit);
+        foreach (var neighbor in adjacentTiles)
         {
             if (!obstacles.Contains(neighbor))
             {
@@ -177,23 +178,24 @@ public class PathFinder
 
 
         var startEdge = currentEdge;
-        var currentPoint = startEdge;
+        var currentEdgePoint = startEdge;
 
         while (true)
         {
-            var isReachable = IsReachable(start, currentPoint, obstacles);
-            if (isReachable && !validDetourPoints.Contains(currentPoint))
+            var isReachable = IsReachable(start, currentEdgePoint, obstacles);
+            if (isReachable && !validEdgePoints.Contains(currentEdgePoint))
             {
-                validDetourPoints.Add(currentPoint);
+                validEdgePoints.Add(currentEdgePoint);
+                Console.WriteLine($"Edge point: {currentEdgePoint}");
             }
 
             bool foundNextEdge = false;
             foreach (var (dx, dy) in possibleDirections)
             {
-                var nextEdgeCandidate = (currentPoint.X + dx, currentPoint.Y + dy);
+                var nextEdgeCandidate = (currentEdgePoint.X + dx, currentEdgePoint.Y + dy);
                 if (obstacles.Contains(nextEdgeCandidate) && visitedEdges.Add(nextEdgeCandidate))
                 {
-                    currentPoint = nextEdgeCandidate;
+                    currentEdgePoint = nextEdgeCandidate;
                     foundNextEdge = true;
                     break;
                 }
@@ -202,15 +204,19 @@ public class PathFinder
             if (!foundNextEdge) break; // No more edges to explore
 
             // If the current edge is not reachable from the start, the previous one might be a valid detour point
-            if (!IsReachable(start, currentPoint, obstacles))
+            var isCurrentEdgeReachable = IsReachable(start, currentEdgePoint, obstacles);
+            if (!isCurrentEdgeReachable)
             {
                 break;
             }
 
-            if (currentPoint == startEdge && validDetourPoints.Count > 0) break; // Back to the starting edge
+            if (currentEdgePoint == startEdge && validEdgePoints.Count > 0) break; // Back to the starting edge
         }
 
-        return validDetourPoints;
+        if(validEdgePoints.Count == 0) {
+            validEdgePoints.Add(obstacleHit);
+        }
+        return validEdgePoints;
     }
 
     private bool IsWithinMapBounds(int x, int y, int mapWidth, int mapHeight)
@@ -363,18 +369,14 @@ class Program
 {
     static void Main()
     {
-        // var start = (X: 0, Y: 0); var goal = (X: 0, Y: 14);
-        // var start = (X: 0, Y: 0); var goal = (X: 5, Y: 7);
-        // var start = (X: 5, Y: 7); var goal = (X: 0, Y: 14);
-        // var start = (X: 5, Y: 8); var goal = (X: 0, Y: 14);
-        var start = (X: 5, Y: 9); var goal = (X: 0, Y: 14);
-        // var start = (X: 4, Y: 10); var goal = (X: 0, Y: 14);
-        // var start = (X: 4, Y: 11); var goal = (X: 0, Y: 14);
-
-        // var start = (X: 0, Y: 0); var goal = (X: 8, Y: 6);
-        // var start = (X: 8, Y: 6); var goal = (X: 13, Y: 14);
-        // var start = (X: 8, Y: 6); var goal = (X: 10, Y: 7);
-        // var start = (X: 10, Y: 7); var goal = (X: 13, Y: 14);
+        
+        var start = (X: -1, Y: -1); var goal = (X: -1, Y: -1);
+        start = (X: 0, Y: 0); goal = (X: 0, Y: 14);
+        start = (X: 0, Y: 0); goal = (X: 5, Y: 7);
+        start = (X: 5, Y: 7); goal = (X: 0, Y: 14);
+        start = (X: 5, Y: 8); goal = (X: 0, Y: 14);
+        start = (X: 5, Y: 9); goal = (X: 0, Y: 14);
+        start = (X: 4, Y: 11); goal = (X: 0, Y: 14);
 
         var obstacles = new HashSet<(int X, int Y)>
         {
