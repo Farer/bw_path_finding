@@ -1,9 +1,14 @@
-﻿namespace bw_path_finding;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
+namespace bw_path_finding;
 
 public class PathFinder
 {
     // 캐싱을 위한 Dictionary (인스턴스 별로 관리)
-    private Dictionary<((int X, int Y) start, (int X, int Y) end), bool> _reachableCache = new Dictionary<((int X, int Y) start, (int X, int Y) end), bool>();
+    // private Dictionary<((int X, int Y) start, (int X, int Y) end), bool> _reachableCache = new Dictionary<((int X, int Y) start, (int X, int Y) end), bool>();
+    private ConcurrentDictionary<((int X, int Y) start, (int X, int Y) end), bool> _reachableCache = new();
 
     public HashSet<(int X, int Y)> GetAllValidEdges((int X, int Y) start, (int X, int Y) targetEdge, int sight, HashSet<(int X, int Y)> obstacles, int mapSize)
     {
@@ -25,7 +30,7 @@ public class PathFinder
 
             // Check if the current point is a valid edge
             var nearTiles = GetNearTiles(currentPoint);
-            if (nearTiles.Any(tile => !obstacles.Contains(tile) && IsReachable(start, currentPoint, obstacles)))
+            if (nearTiles.Any(tile => !obstacles.Contains(tile) && RaycastDDA(start, currentPoint, mapSize, obstacles, mapSize) != null))
             {
                 validEdges.Add(currentPoint);
             }
@@ -33,7 +38,7 @@ public class PathFinder
             // Explore neighbors
             foreach (var neighbor in GetAdjacentTiles(currentPoint))
             {
-                
+
                 if (neighbor.X >= 0 && neighbor.X < mapSize && neighbor.Y >= 0 && neighbor.Y < mapSize &&
                     obstacles.Contains(neighbor) && !visited.Contains(neighbor))
                 {
@@ -45,57 +50,123 @@ public class PathFinder
 
         return validEdges;
     }
+    /// <summary>
+    /// Implements raycasting on a 2D grid using the Digital Differential Analyzer (DDA) algorithm for accurate line tracing.
+    /// </summary>
+    /// <param name="start">The starting coordinates of the ray.</param>
+    /// <param name="target">The target coordinates the ray is heading towards.</param>
+    /// <param name="maxDistance">The maximum travel distance of the ray.</param>
+    /// <param name="obstacles">A set of obstacle coordinates.</param>
+    /// <param name="mapSize">The size of the map.</param>
+    /// <returns>The coordinates of the hit obstacle or null.</returns>
+    public static (int X, int Y)? RaycastDDA(
+        (int X, int Y) start,
+        (int X, int Y) target,
+        int maxDistance,
+        HashSet<(int X, int Y)> obstacles,
+        int mapSize
+    )
+    {
+        int startX = start.X;
+        int startY = start.Y;
+        int targetX = target.X;
+        int targetY = target.Y;
+
+        int dx = targetX - startX;
+        int dy = targetY - startY;
+
+        if (dx == 0 && dy == 0) return null;
+
+        int currentX = startX;
+        int currentY = startY;
+
+        int stepX = Math.Sign(dx);
+        int stepY = Math.Sign(dy);
+
+        float rayDirX = dx == 0 ? 0 : 1f / MathF.Abs(dx);
+        float rayDirY = dy == 0 ? 0 : 1f / MathF.Abs(dy);
+
+        float tMaxX = (stepX > 0 ? (float)(1 - (startX % 1)) : (float)(startX % 1)) * rayDirX;
+        float tMaxY = (stepY > 0 ? (float)(1 - (startY % 1)) : (float)(startY % 1)) * rayDirY;
+
+        float tDeltaX = rayDirX;
+        float tDeltaY = rayDirY;
+
+        int steps = 0;
+
+        while (steps < maxDistance)
+        {
+            if (currentX < 0 || currentX >= mapSize || currentY < 0 || currentY >= mapSize)
+            {
+                return null; // Out of bounds
+            }
+
+            if (obstacles.Contains((currentX, currentY)))
+            {
+                return (currentX, currentY); // Hit obstacle
+            }
+
+            if (tMaxX < tMaxY)
+            {
+                tMaxX += tDeltaX;
+                currentX += stepX;
+            }
+            else
+            {
+                tMaxY += tDeltaY;
+                currentY += stepY;
+            }
+
+            steps++;
+        }
+
+        return null; // No obstacle hit within max distance
+    }
 
     /// <summary>
     /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path (Bresenham's line algorithm).
-    /// 캐싱 기능을 추가했습니다.
     /// </summary>
-    /// <param name="start">The starting point coordinates.</param>
-    /// <param name="end">The destination point coordinates.</param>
-    /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
-    /// <returns>True if the end point is reachable, false otherwise.</returns>
-    private bool IsReachable((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
+    public bool IsReachable((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
     {
         var cacheKey = (start, end);
-        if (_reachableCache.TryGetValue(cacheKey, out bool isReachable))
+        return _reachableCache.GetOrAdd(cacheKey, _ =>
         {
+            int x = start.X;
+            int y = start.Y;
+            int dx = Math.Abs(end.X - start.X);
+            int dy = Math.Abs(end.Y - start.Y);
+            int sx = start.X < end.X ? 1 : -1;
+            int sy = start.Y < end.Y ? 1 : -1;
+            int err = dx - dy;
+            bool isReachable = true;
+
+            while (true)
+            {
+                if (obstacles.Contains((x, y)) && (x, y) != end)
+                {
+                    isReachable = false;
+                    break;
+                }
+
+                if (x == end.X && y == end.Y)
+                {
+                    break;
+                }
+
+                int e2 = 2 * err;
+                if (e2 > -dy)
+                {
+                    err -= dy;
+                    x += sx;
+                }
+                else if (e2 < dx)
+                {
+                    err += dx;
+                    y += sy;
+                }
+            }
             return isReachable;
-        }
-
-        int x = start.X;
-        int y = start.Y;
-        int dx = Math.Abs(end.X - start.X);
-        int dy = Math.Abs(end.Y - start.Y);
-        int sx = start.X < end.X ? 1 : -1;
-        int sy = start.Y < end.Y ? 1 : -1;
-        int err = dx - dy;
-
-        while (true)
-        {
-            if (obstacles.Contains((x, y)) && (x, y) != end)
-            {
-                _reachableCache[cacheKey] = false;
-                return false;
-            }
-
-            if (x == end.X && y == end.Y)
-            {
-                _reachableCache[cacheKey] = true;
-                return true;
-            }
-
-            int e2 = 2 * err;
-            if (e2 > -dy)
-            {
-                err -= dy;
-                x += sx;
-            }
-            else if (e2 < dx)
-            {
-                err += dx;
-                y += sy;
-            }
-        }
+        });
     }
 
     /// <summary>
@@ -115,17 +186,12 @@ public class PathFinder
         yield return (tile.X + 1, tile.Y + 1);
     }
 
-    // GetAdjacentTiles 와 동일한 기능을 합니다. 필요에 따라 이름을 조정하세요.
-    private static IEnumerable<(int X, int Y)> GetNearTiles((int X, int Y) tile)
+    public static IEnumerable<(int X, int Y)> GetNearTiles((int X, int Y) tile)
     {
         yield return (tile.X - 1, tile.Y);
         yield return (tile.X + 1, tile.Y);
         yield return (tile.X, tile.Y - 1);
         yield return (tile.X, tile.Y + 1);
-        yield return (tile.X - 1, tile.Y - 1);
-        yield return (tile.X - 1, tile.Y + 1);
-        yield return (tile.X + 1, tile.Y - 1);
-        yield return (tile.X + 1, tile.Y + 1);
     }
 
     #region 나머지 코드는 이전과 동일합니다.
@@ -341,7 +407,8 @@ public class PathFinder
             if (currentEdgePoint == startEdge && validEdgePoints.Count > 0) break; // Back to the starting edge
         }
 
-        if(validEdgePoints.Count == 0) {
+        if (validEdgePoints.Count == 0)
+        {
             validEdgePoints.Add(obstacleHit);
         }
         return validEdgePoints;
@@ -379,7 +446,8 @@ public class PathFinder
         // }
 
         (int X, int Y)? bestDetour = null;
-        if(!isReverse) {
+        if (!isReverse)
+        {
             double minDistanceToGoal = double.MaxValue;
 
             foreach (var detour in potentialDetours)
@@ -396,7 +464,8 @@ public class PathFinder
                 }
             }
         }
-        else {
+        else
+        {
             double maxDistanceFromStart = double.MinValue;
 
             foreach (var detour in potentialDetours)
@@ -498,7 +567,7 @@ public class PathFinder
         return edges;
     }
 
-    public ((int X, int Y), (int X, int Y))? FindOuterMostEdges((int X, int Y) start, List<(int X, int Y)> validEdges)
+    public ((int X, int Y), (int X, int Y))? FindOuterMostEdges((int X, int Y) start, HashSet<(int X, int Y)> validEdges)
     {
         if (validEdges == null || validEdges.Count < 2)
         {
@@ -525,6 +594,56 @@ public class PathFinder
 
         return (leftmost, rightmost);
     }
+
+    // public (int X, int Y) DetermineFinalTargetEdge(((int X, int Y), (int X, int Y)) outerMostEdges, int mapSize)
+    // {
+    //     var leftNearTiles = GetNearTiles(outerMostEdges.Item1);
+    //     bool isLeftOutOfMap = false;
+    //     foreach (var tile in leftNearTiles)
+    //     {
+    //         // Console.WriteLine($"Left near tile: {tile}");
+    //         if (tile.X < 0 || tile.X >= mapSize || tile.Y < 0 || tile.Y >= mapSize)
+    //         {
+    //             isLeftOutOfMap = true;
+    //             Console.WriteLine($"out of Map: {tile}");
+    //             break;
+    //         }
+    //     }
+
+    //     var rightNearTiles = GetNearTiles(outerMostEdges.Item2);
+    //     bool isRightOutOfMap = false;
+    //     foreach (var tile in rightNearTiles)
+    //     {
+    //         Console.WriteLine($"Right near tile: {tile}");
+    //         if (tile.X < 0 || tile.X >= mapSize || tile.Y < 0 || tile.Y >= mapSize)
+    //         {
+    //             isRightOutOfMap = true;
+    //             Console.WriteLine($"out of Map: {tile}");
+    //             break;
+    //         }
+    //     }
+
+    //     if (isLeftOutOfMap && isRightOutOfMap)
+    //     {
+    //         Console.WriteLine("Both edges are near the border");
+    //         return (-1, -1);
+    //     }
+    //     else if (isLeftOutOfMap)
+    //     {
+    //         Console.WriteLine("Left edge is near the border");
+    //         return outerMostEdges.Item2;
+    //     }
+    //     else if (isRightOutOfMap)
+    //     {
+    //         Console.WriteLine("Right edge is near the border");
+    //         return outerMostEdges.Item1;
+    //     }
+    //     else
+    //     {
+    //         Console.WriteLine("Both edges are not near the border");
+
+    //     }
+    // }
     #endregion
 }
 
@@ -534,11 +653,9 @@ class Program
     {
         var pathFinder = new PathFinder();
         var mapSize = 15;
+        mapSize = 9999;
         var start = (X: -1, Y: -1); var goal = (X: -1, Y: -1);
-        start = (X: 0, Y: 0); goal = (X: 0, Y: 14);
-        // start = (X: 0, Y: 0); goal = (X: 4, Y: 6);
-        // start = (X: 4, Y: 6); goal = (X: 0, Y: 14);
-        // start = (X: 3, Y: 6); goal = (X: 0, Y: 14);
+        start = (X: 0, Y: 0); goal = (X: 6, Y: 14);
 
         var obstacles = new HashSet<(int X, int Y)>
         {
@@ -550,13 +667,52 @@ class Program
                 (1, 9),     (2, 9),     (3, 9),
                                         (3, 10)
         };
-        
+
+        (int X, int Y)? raycastResult = (X: -1, Y: -1);
+        List<(int?, int?)> raycastResults = []; // 결과를 저장할 리스트
+        Stopwatch stopwatch = new();
+        stopwatch.Start();
+        for(var i=0; i<mapSize; i++) {
+            goal = (X: 0, Y: i);
+            raycastResult = PathFinder.RaycastDDA(start, goal, mapSize, obstacles, mapSize);
+            raycastResults.Add((raycastResult?.X, raycastResult?.Y)); // 결과를 리스트에 추가하여 사용
+        }
+        for(var i=0; i<mapSize; i++) {
+            goal = (X: i, Y: 0);
+            raycastResult = PathFinder.RaycastDDA(start, goal, mapSize, obstacles, mapSize);
+            raycastResults.Add((raycastResult?.X, raycastResult?.Y)); // 결과를 리스트에 추가하여 사용
+        }
+        stopwatch.Stop();
+        Console.WriteLine($"Raycast Elapsed time: {stopwatch.ElapsedMilliseconds}ms");
+
+        bool isReachable = false;
+        List<bool> reahableResults = []; // 결과를 저장할 리스트
+        stopwatch.Restart();
+        var requests = new List<((int X, int Y) start, (int X, int Y) goal)>();
+        for(var i=0; i<mapSize; i++) {
+            goal = (X: 0, Y: i);
+            requests.Add((start, goal));
+        }
+        Parallel.ForEach(requests, request =>
+        {
+            bool isReachable = pathFinder.IsReachable(request.start, request.goal, obstacles);
+            // isReachable 결과를 처리 (예: 로깅, 다른 컬렉션에 저장 등)
+            // Console.WriteLine($"Start: {request.start}, Goal: {request.goal}, Reachable: {isReachable}");
+        });
+        stopwatch.Stop();
+        Console.WriteLine($"IsReachable Elapsed time: {stopwatch.ElapsedMilliseconds}ms");
+        Environment.Exit(0);
+
 
         var allValidEdges = pathFinder.GetAllValidEdges(start, (0, 7), 15, obstacles, mapSize);
         foreach (var edge in allValidEdges)
         {
             Console.WriteLine($"Valid Edge: {edge}");
         }
+
+        var outerMostEdges = pathFinder.FindOuterMostEdges(start, allValidEdges);
+        Console.WriteLine($"leftmost: {outerMostEdges?.Item1}, rightmost: {outerMostEdges?.Item2}");
+
         Environment.Exit(0);
 
         // int sight = 5; // 시야 거리 설정
