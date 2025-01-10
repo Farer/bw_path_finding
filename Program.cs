@@ -128,8 +128,7 @@ public class PathFinder
     /// </summary>
     public bool IsReachable((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
     {
-        var cacheKey = (start, end);
-        return _reachableCache.GetOrAdd(cacheKey, _ =>
+        return _reachableCache.GetOrAdd((start, end), _ =>
         {
             int x = start.X;
             int y = start.Y;
@@ -194,7 +193,6 @@ public class PathFinder
         yield return (tile.X, tile.Y + 1);
     }
 
-    #region 나머지 코드는 이전과 동일합니다.
     /// <summary>
     /// Finds a path from the start point to the end point, stopping immediately upon encountering an obstacle and
     /// efficiently identifying valid detour points by exploring the obstacle's edge.
@@ -644,7 +642,6 @@ public class PathFinder
 
     //     }
     // }
-    #endregion
 }
 
 class Program
@@ -668,6 +665,9 @@ class Program
                                         (3, 10)
         };
 
+
+
+        start = (X: mapSize/2, Y: 0);
         (int X, int Y)? raycastResult = (X: -1, Y: -1);
         List<(int?, int?)> raycastResults = []; // 결과를 저장할 리스트
         Stopwatch stopwatch = new();
@@ -685,8 +685,7 @@ class Program
         stopwatch.Stop();
         Console.WriteLine($"Raycast Elapsed time: {stopwatch.ElapsedMilliseconds}ms");
 
-        bool isReachable = false;
-        List<bool> reahableResults = []; // 결과를 저장할 리스트
+        ConcurrentBag<(int, int)> reachableTiles = [];
         stopwatch.Restart();
         var requests = new List<((int X, int Y) start, (int X, int Y) goal)>();
         for(var i=0; i<mapSize; i++) {
@@ -696,11 +695,13 @@ class Program
         Parallel.ForEach(requests, request =>
         {
             bool isReachable = pathFinder.IsReachable(request.start, request.goal, obstacles);
+            if(isReachable) { reachableTiles.Add(goal); }
             // isReachable 결과를 처리 (예: 로깅, 다른 컬렉션에 저장 등)
             // Console.WriteLine($"Start: {request.start}, Goal: {request.goal}, Reachable: {isReachable}");
         });
         stopwatch.Stop();
         Console.WriteLine($"IsReachable Elapsed time: {stopwatch.ElapsedMilliseconds}ms");
+        Console.WriteLine("Reachable Tiles Count: " + reachableTiles.Count);
         Environment.Exit(0);
 
 
