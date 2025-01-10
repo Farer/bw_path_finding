@@ -1,480 +1,267 @@
 ﻿namespace bw_path_finding;
-
-public class PathFinder
+// Represents a point in 2D space
+public struct Point
 {
-    /// <summary>
-    /// Finds a path from the start point to the end point, stopping immediately upon encountering an obstacle and
-    /// efficiently identifying valid detour points by exploring the obstacle's edge.
-    /// </summary>
-    /// <param name="start">The starting point.</param>
-    /// <param name="end">The destination point.</param>
-    /// <param name="obstacles">A set of obstacle coordinates.</param>
-    /// <returns>A tuple containing the path taken before interruption (if any),
-    /// and a list of valid detour points around the encountered obstacle.</returns>
-    public (List<(int X, int Y)> Path, List<(int X, int Y)> ValidDetourPoints) FindPathUntilObstacle(
-            (int X, int Y) start,
-            (int X, int Y) end,
-            HashSet<(int X, int Y)> obstacles,
-            bool isReverse = false,
-            int mapSize = 15
-        )
+    public double X { get; set; }
+    public double Y { get; set; }
+
+    public Point(double x, double y)
     {
-        var path = new List<(int X, int Y)>();
-        int currentX = start.X;
-        int currentY = start.Y;
-
-        int deltaX = Math.Abs(end.X - start.X);
-        int deltaY = Math.Abs(end.Y - start.Y);
-
-        int stepX = start.X < end.X ? 1 : -1;
-        int stepY = start.Y < end.Y ? 1 : -1;
-
-        int error = deltaX - deltaY;
-
-        while (true)
-        {
-            path.Add((currentX, currentY));
-
-            if (obstacles.Contains((currentX, currentY)) && (currentX, currentY) != start) // Obstacle encountered
-            {
-                // Explore the edge of the encountered obstacle to find detour points.
-                var validDetourPoints = FindDetourPointsAlongEdge(start, end, (currentX, currentY), obstacles, isReverse, mapSize);
-                return (path, validDetourPoints);
-            }
-
-            if (currentX == end.X && currentY == end.Y)
-            {
-                break;
-            }
-
-            int doubleError = 2 * error;
-            if (doubleError > -deltaY)
-            {
-                error -= deltaY;
-                currentX += stepX;
-            }
-            else if (doubleError < deltaX)
-            {
-                error += deltaX;
-                currentY += stepY;
-            }
-        }
-
-        return (path, []); // Reached the destination
+        X = x;
+        Y = y;
     }
 
-    /// <summary>
-    /// Explores the edge of the obstacle encountered from the starting point to find possible detour points.
-    /// </summary>
-    /// <param name="start">The starting point.</param>
-    /// <param name="end">The destination point.</param>
-    /// <param name="obstacleHit">The coordinates of the first encountered obstacle.</param>
-    /// <param name="obstacles">A set of all obstacle coordinates.</param>
-    /// <returns>A list of valid detour points.</returns>
-    private List<(int X, int Y)> FindDetourPointsAlongEdge(
-            (int X, int Y) start,
-            (int X, int Y) end,
-            (int X, int Y) obstacleHit,
-            HashSet<(int X, int Y)> obstacles,
-            bool isReverse = false,
-            int mapSize = 15
-        )
+    public static double Distance(Point p1, Point p2)
     {
-        var validEdgePoints = new List<(int X, int Y)>();
-        var visitedEdges = new HashSet<(int X, int Y)>();
-        var queue = new Queue<(int X, int Y)>();
+        return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
+    }
+}
 
-        // Add the exterior tiles of the first encountered obstacle to the queue.
-        var adjacentTiles = GetAdjacentTiles(obstacleHit);
-        foreach (var neighbor in adjacentTiles)
+public class TangentBugAlgorithm
+{
+    private Point _robotPosition;
+    private Point _goalPosition;
+    private List<List<Point>> _obstacles;
+    private double _sensorRange;
+    private double _stepSize;
+
+    private enum State { MovingToGoal, FollowingBoundary };
+    private State _currentState;
+    private List<Point> _currentBoundary = new List<Point>();
+    private double _dMin = double.MaxValue;
+    private double _dLeave = double.MaxValue;
+    private Point _hitPoint;
+    private bool _followClockwise = true; // Default to clockwise boundary following
+
+    public TangentBugAlgorithm(Point start, Point goal, List<List<Point>> obstacles, double sensorRange = 10, double stepSize = 0.1)
+    {
+        _robotPosition = start;
+        _goalPosition = goal;
+        _obstacles = obstacles;
+        _sensorRange = sensorRange;
+        _stepSize = stepSize;
+        _currentState = State.MovingToGoal;
+    }
+
+    public List<Point> FindPath()
+    {
+        var path = new List<Point> { _robotPosition };
+
+        while (Point.Distance(_robotPosition, _goalPosition) > _stepSize) // Add a tolerance
         {
-            if (!obstacles.Contains(neighbor))
+            switch (_currentState)
             {
-                queue.Enqueue(obstacleHit); // Start exploration from the obstacle hit
-                break;
-            }
-        }
-
-        if (queue.Count == 0) return []; // No way to detour if completely surrounded
-
-        var currentEdge = queue.Dequeue();
-
-        var directionX = 0;
-        var directionY = 0;
-        var possibleDirections = new List<(int, int)>();
-
-        if (!isReverse)
-        {
-            // Normal exploration: prioritize direction towards the destination
-            directionX = Math.Sign(end.X - currentEdge.X);
-            directionY = Math.Sign(end.Y - currentEdge.Y);
-        }
-        else
-        {
-            // Reverse exploration: prioritize direction towards the starting point
-            directionX = Math.Sign(start.X - currentEdge.X);
-            directionY = Math.Sign(start.Y - currentEdge.Y);
-        }
-
-        // Configure possibleDirections dynamically based on current movement
-        if (directionX != 0 && directionY != 0)
-        {
-            // Diagonal movement: prioritize diagonal, then X and Y
-            possibleDirections = new List<(int, int)>
-            {
-                (directionX, directionY),    // Diagonal towards target
-                (directionX, 0),            // Horizontal
-                (0, directionY),            // Vertical
-                (-directionX, directionY),  // Opposite diagonal
-                (directionX, -directionY),  // Opposite diagonal
-                (-directionX, 0),           // Opposite horizontal
-                (0, -directionY)            // Opposite vertical
-            };
-        }
-        else if (directionX != 0)
-        {
-            // Horizontal movement: prioritize X-axis, then diagonal
-            possibleDirections = new List<(int, int)>
-            {
-                (directionX, 0),            // Horizontal
-                (directionX, 1),            // Diagonal down
-                (directionX, -1),           // Diagonal up
-                (0, 1),                     // Vertical down
-                (0, -1),                    // Vertical up
-                (-directionX, 1),           // Opposite diagonal down
-                (-directionX, -1),          // Opposite diagonal up
-                (-directionX, 0)            // Opposite horizontal
-            };
-        }
-        else if (directionY != 0)
-        {
-            // Vertical movement: prioritize Y-axis, then diagonal
-            possibleDirections = new List<(int, int)>
-            {
-                (0, directionY),            // Vertical
-                (1, directionY),            // Diagonal right
-                (-1, directionY),           // Diagonal left
-                (1, 0),                     // Horizontal right
-                (-1, 0),                    // Horizontal left
-                (1, -directionY),           // Opposite diagonal right
-                (-1, -directionY),          // Opposite diagonal left
-                (0, -directionY)            // Opposite vertical
-            };
-        }
-        else
-        {
-            // Default fallback (stationary case)
-            possibleDirections = new List<(int, int)>
-            {
-                (1, 0), (0, 1), (-1, 0), (0, -1),
-                (1, 1), (-1, 1), (1, -1), (-1, -1)
-            };
-        }
-
-        // Filter directions to ensure they are within map bounds
-        possibleDirections = possibleDirections.Where(dir =>
-            IsWithinMapBounds(currentEdge.X + dir.Item1, currentEdge.Y + dir.Item2, mapSize, mapSize)
-        ).ToList();
-
-
-        var startEdge = currentEdge;
-        var currentEdgePoint = startEdge;
-
-        while (true)
-        {
-            var isReachable = IsReachable(start, currentEdgePoint, obstacles);
-            if (isReachable && !validEdgePoints.Contains(currentEdgePoint))
-            {
-                validEdgePoints.Add(currentEdgePoint);
-                Console.WriteLine($"Edge point: {currentEdgePoint}");
-            }
-
-            bool foundNextEdge = false;
-            foreach (var (dx, dy) in possibleDirections)
-            {
-                var nextEdgeCandidate = (currentEdgePoint.X + dx, currentEdgePoint.Y + dy);
-                if (obstacles.Contains(nextEdgeCandidate) && visitedEdges.Add(nextEdgeCandidate))
-                {
-                    currentEdgePoint = nextEdgeCandidate;
-                    foundNextEdge = true;
+                case State.MovingToGoal:
+                    MoveTowardsGoal(path);
                     break;
-                }
+                case State.FollowingBoundary:
+                    FollowBoundary(path);
+                    break;
             }
 
-            if (!foundNextEdge) break; // No more edges to explore
-
-            // If the current edge is not reachable from the start, the previous one might be a valid detour point
-            var isCurrentEdgeReachable = IsReachable(start, currentEdgePoint, obstacles);
-            if (!isCurrentEdgeReachable)
+            if (path.Count > 10000) // Safety break to prevent infinite loops in complex scenarios
             {
-                break;
-            }
-
-            if (currentEdgePoint == startEdge && validEdgePoints.Count > 0) break; // Back to the starting edge
-        }
-
-        if(validEdgePoints.Count == 0) {
-            validEdgePoints.Add(obstacleHit);
-        }
-        return validEdgePoints;
-    }
-
-    private bool IsWithinMapBounds(int x, int y, int mapWidth, int mapHeight)
-    {
-        return x >= 0 && x < mapWidth && y >= 0 && y < mapHeight;
-    }
-
-
-    /// <summary>
-    /// Returns the adjacent tiles of a given tile.
-    /// </summary>
-    /// <param name="tile">The reference tile coordinates.</param>
-    /// <returns>An enumerable of adjacent tile coordinates.</returns>
-    private static IEnumerable<(int X, int Y)> GetAdjacentTiles((int X, int Y) tile)
-    {
-        yield return (tile.X - 1, tile.Y);
-        yield return (tile.X + 1, tile.Y);
-        yield return (tile.X, tile.Y - 1);
-        yield return (tile.X, tile.Y + 1);
-        yield return (tile.X - 1, tile.Y - 1);
-        yield return (tile.X - 1, tile.Y + 1);
-        yield return (tile.X + 1, tile.Y - 1);
-        yield return (tile.X + 1, tile.Y + 1);
-    }
-
-    /// <summary>
-    /// Finds the optimal detour point near the selected edge that is reachable from the start and closer to the goal.
-    /// </summary>
-    /// <param name="start">The starting point coordinates.</param>
-    /// <param name="goal">The goal point coordinates.</param>
-    /// <param name="selectedEdge">The selected edge point coordinates.</param>
-    /// <param name="currentPath">The current path taken.</param>
-    /// <param name="obstacles">The set of obstacles.</param>
-    /// <returns>The optimal detour point, or null if none is found.</returns>
-    public (int X, int Y)? FindOptimalDetourPoint(
-            (int X, int Y) start,
-            (int X, int Y) goal,
-            (int X, int Y) selectedEdge,
-            List<(int X, int Y)> currentPath,
-            HashSet<(int X, int Y)> obstacles,
-            bool isReverse = false
-        )
-    {
-        var potentialDetours = new HashSet<(int X, int Y)>(
-            GetAdjacentTiles(selectedEdge).Where(tile => !obstacles.Contains(tile))
-        );
-        // foreach (var point in currentPath.Where(p => !obstacles.Contains(p)))
-        // {
-        //     potentialDetours.Add(point);
-        // }
-
-        (int X, int Y)? bestDetour = null;
-        if(!isReverse) {
-            double minDistanceToGoal = double.MaxValue;
-
-            foreach (var detour in potentialDetours)
-            {
-                var isReachable = IsReachable(start, detour, obstacles);
-                if (isReachable)
-                {
-                    double distanceToGoal = CalculateDistance(detour, goal);
-                    if (distanceToGoal < minDistanceToGoal)
-                    {
-                        minDistanceToGoal = distanceToGoal;
-                        bestDetour = detour;
-                    }
-                }
-            }
-        }
-        else {
-            double maxDistanceFromStart = double.MinValue;
-
-            foreach (var detour in potentialDetours)
-            {
-                var isReachable = IsReachable(start, detour, obstacles);
-                if (isReachable)
-                {
-                    double distanceFromStart = CalculateDistance(detour, start);
-                    if (distanceFromStart > maxDistanceFromStart)
-                    {
-                        maxDistanceFromStart = distanceFromStart;
-                        bestDetour = detour;
-                    }
-                }
+                Console.WriteLine("Safety break: Potential infinite loop.");
+                return path;
             }
         }
 
-        return bestDetour;
+        path.Add(_goalPosition);
+        return path;
     }
 
-    // Helper function to calculate the Euclidean distance between two points.
-    private static double CalculateDistance((int X, int Y) p1, (int X, int Y) p2)
+    private void MoveTowardsGoal(List<Point> path)
     {
-        int dx = p1.X - p2.X;
-        int dy = p1.Y - p2.Y;
-        return Math.Sqrt(dx * dx + dy * dy);
-    }
+        Point direction = new Point(_goalPosition.X - _robotPosition.X, _goalPosition.Y - _robotPosition.Y);
+        double magnitude = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y);
+        Point normalizedDirection = new Point(direction.X / magnitude, direction.Y / magnitude);
+        Point nextPosition = new Point(_robotPosition.X + normalizedDirection.X * _stepSize, _robotPosition.Y + normalizedDirection.Y * _stepSize);
 
-    /// <summary>
-    /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path (Bresenham's line algorithm).
-    /// </summary>
-    /// <param name="start">The starting point coordinates.</param>
-    /// <param name="end">The destination point coordinates.</param>
-    /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
-    /// <returns>True if the end point is reachable, false otherwise.</returns>
-    private bool IsReachable((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
-    {
-        int x = start.X;
-        int y = start.Y;
-        int dx = Math.Abs(end.X - start.X);
-        int dy = Math.Abs(end.Y - start.Y);
-        int sx = start.X < end.X ? 1 : -1;
-        int sy = start.Y < end.Y ? 1 : -1;
-        int err = dx - dy;
-
-        while (true)
+        if (IsObstacleBlocking(_robotPosition, nextPosition, _obstacles))
         {
-            if (obstacles.Contains((x, y)) && (x, y) != end)
+            _currentState = State.FollowingBoundary;
+            _hitPoint = _robotPosition;
+            _currentBoundary = FindBlockingObstacle(_robotPosition, nextPosition, _obstacles);
+            if (_currentBoundary.Any())
             {
-                return false;
+                _dMin = double.MaxValue; // Reset dMin
+                _dLeave = Point.Distance(_robotPosition, _goalPosition);
+                DetermineBoundaryFollowingDirection();
             }
-
-            if (x == end.X && y == end.Y)
+            else
             {
-                return true;
-            }
-
-            int e2 = 2 * err;
-            if (e2 > -dy)
-            {
-                err -= dy;
-                x += sx;
-            }
-            else if (e2 < dx)
-            {
-                err += dx;
-                y += sy;
-            }
-
-            // Safety break
-            if (Math.Abs(x - start.X) > Math.Abs(end.X - start.X) + 1 || Math.Abs(y - start.Y) > Math.Abs(end.Y - start.Y) + 1)
-            {
-                return false;
+                Console.WriteLine("Error: Could not identify blocking obstacle.");
+                return;
             }
         }
+        else
+        {
+            _robotPosition = nextPosition;
+            path.Add(_robotPosition);
+        }
+    }
+
+    private void FollowBoundary(List<Point> path)
+    {
+        if (!_currentBoundary.Any())
+        {
+            Console.WriteLine("Error: No boundary to follow.");
+            _currentState = State.MovingToGoal; // Fallback
+            return;
+        }
+
+        // Find the closest point on the boundary to the current robot position
+        Point closestBoundaryPoint = FindClosestPointOnPolygon(_robotPosition, _currentBoundary);
+        int currentIndex = _currentBoundary.IndexOf(closestBoundaryPoint);
+        if (currentIndex == -1)
+        {
+            // Handle the case where the closest point isn't directly a vertex
+            // You might need a more sophisticated method to find your position on the edge
+            Console.WriteLine("Warning: Robot not exactly on boundary vertex.");
+            return;
+        }
+
+        // Determine the next point to move to along the boundary
+        int nextIndex = _followClockwise ? (currentIndex + 1) % _currentBoundary.Count : (currentIndex - 1 + _currentBoundary.Count) % _currentBoundary.Count;
+        Point nextBoundaryPoint = _currentBoundary[nextIndex];
+
+        // Move a small step towards the next boundary point
+        Point moveDirection = new Point(nextBoundaryPoint.X - _robotPosition.X, nextBoundaryPoint.Y - _robotPosition.Y);
+        double magnitude = Math.Sqrt(moveDirection.X * moveDirection.X + moveDirection.Y * moveDirection.Y);
+        Point normalizedDirection = new Point(moveDirection.X / magnitude, moveDirection.Y / magnitude);
+        Point nextPosition = new Point(_robotPosition.X + normalizedDirection.X * _stepSize, _robotPosition.Y + normalizedDirection.Y * _stepSize);
+
+        // Stay on the boundary (simplified - might need more robust boundary following)
+        _robotPosition = nextPosition;
+        path.Add(_robotPosition);
+
+        double currentDistanceToGoal = Point.Distance(_robotPosition, _goalPosition);
+        _dMin = Math.Min(_dMin, currentDistanceToGoal);
+        _dLeave = currentDistanceToGoal;
+
+        // Check conditions to leave the boundary
+        if (!IsObstacleBlocking(_robotPosition, _goalPosition, _obstacles) || _dLeave < _dMin)
+        {
+            _currentState = State.MovingToGoal;
+        }
+    }
+
+    private List<Point> FindBlockingObstacle(Point start, Point end, List<List<Point>> obstacles)
+    {
+        foreach (var obstacle in obstacles)
+        {
+            for (int i = 0; i < obstacle.Count; i++)
+            {
+                Point p1 = obstacle[i];
+                Point p2 = obstacle[(i + 1) % obstacle.Count];
+                if (SegmentsIntersect(start, end, p1, p2))
+                {
+                    return obstacle;
+                }
+            }
+        }
+        return new List<Point>();
+    }
+
+    private bool IsObstacleBlocking(Point start, Point end, List<List<Point>> obstacles)
+    {
+        foreach (var obstacle in obstacles)
+        {
+            for (int i = 0; i < obstacle.Count; i++)
+            {
+                Point p1 = obstacle[i];
+                Point p2 = obstacle[(i + 1) % obstacle.Count];
+                if (SegmentsIntersect(start, end, p1, p2))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Simple line segment intersection check
+    private bool SegmentsIntersect(Point a, Point b, Point c, Point d)
+    {
+        double Denominator = (b.X - a.X) * (d.Y - c.Y) - (b.Y - a.Y) * (d.X - c.X);
+        if (Denominator == 0)
+            return false;
+
+        double t = ((c.X - a.X) * (d.Y - c.Y) - (c.Y - a.Y) * (d.X - c.X)) / Denominator;
+        double u = -((a.X - c.X) * (b.Y - a.Y) - (a.Y - c.Y) * (b.X - a.X)) / Denominator;
+
+        return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+    }
+
+    private Point FindClosestPointOnPolygon(Point point, List<Point> polygon)
+    {
+        if (!polygon.Any())
+        {
+            return point; // Or throw an exception
+        }
+
+        Point closestPoint = polygon[0];
+        double minDistance = Point.Distance(point, closestPoint);
+
+        for (int i = 1; i < polygon.Count; i++)
+        {
+            double distance = Point.Distance(point, polygon[i]);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestPoint = polygon[i];
+            }
+        }
+        return closestPoint;
+    }
+
+    private void DetermineBoundaryFollowingDirection()
+    {
+        // Check both clockwise and counter-clockwise directions briefly
+        // to see which one leads to potentially closer points to the goal
+
+        // Simulate moving a small step clockwise
+        int currentIndex = _currentBoundary.FindIndex(p => Math.Abs(p.X - _hitPoint.X) < 1e-6 && Math.Abs(p.Y - _hitPoint.Y) < 1e-6);
+        if (currentIndex == -1) return; // Should not happen
+
+        int nextClockwiseIndex = (currentIndex + 1) % _currentBoundary.Count;
+        Point nextClockwisePoint = _currentBoundary[nextClockwiseIndex];
+        double distClockwise = Point.Distance(nextClockwisePoint, _goalPosition);
+
+        int nextCounterClockwiseIndex = (currentIndex - 1 + _currentBoundary.Count) % _currentBoundary.Count;
+        Point nextCounterClockwisePoint = _currentBoundary[nextCounterClockwiseIndex];
+        double distCounterClockwise = Point.Distance(nextCounterClockwisePoint, _goalPosition);
+
+        _followClockwise = distClockwise < distCounterClockwise;
     }
 }
 
 class Program
 {
-    static void Main()
+    static void Main(string[] args)
     {
-        
-        var start = (X: -1, Y: -1); var goal = (X: -1, Y: -1);
-        start = (X: 0, Y: 0); goal = (X: 0, Y: 14);
-        start = (X: 0, Y: 0); goal = (X: 5, Y: 7);
-        start = (X: 5, Y: 7); goal = (X: 0, Y: 14);
-        start = (X: 5, Y: 8); goal = (X: 0, Y: 14);
-        start = (X: 5, Y: 9); goal = (X: 0, Y: 14);
-        start = (X: 4, Y: 11); goal = (X: 0, Y: 14);
+        // Define start and goal positions
+        Point start = new Point(1, 1);
+        Point goal = new Point(8, 8);
 
-        var obstacles = new HashSet<(int X, int Y)>
-        {
-                (1, 6),     (2, 6),
-        (0, 7), (1, 7),     (2, 7),     (3, 7),     (4, 7),
-                (1, 8),     (2, 8),     (3, 8),     (4, 8),
-                (1, 9),     (2, 9),     (3, 9),
-                                        (3, 10)
-        };
-
-        var pathFinder = new PathFinder();
-        var mapSize = 15;
-
-        var (path, validSearchEdges) = pathFinder.FindPathUntilObstacle(start, goal, obstacles, false, mapSize);
-
-        if (validSearchEdges.Count == 0)
-        {
-            DisplayMap(mapSize, start, goal, obstacles, path, null, null);
-        }
-        else if (validSearchEdges.Count > 0)
-        {
-            bool isReverse = false;
-            var (X, Y) = validSearchEdges.Last();
-            if (X <= 0 || X >= mapSize - 1)
+        // Define obstacles as lists of points (representing polygon vertices)
+        var obstacles = new List<List<Point>>
             {
-                isReverse = true;
-                (path, validSearchEdges) = pathFinder.FindPathUntilObstacle(start, goal, obstacles, true, mapSize);
-                if (validSearchEdges.Count == 0)
-                {
-                    DisplayMap(mapSize, start, goal, obstacles, path, null, null);
-                }
-            }
-            var bestEdgePoint = validSearchEdges.Last();
-            (int X, int Y)? optimalDetourPoint = null;
-            if (bestEdgePoint != (-1, -1))
-            {
-                optimalDetourPoint = pathFinder.FindOptimalDetourPoint(start, goal, bestEdgePoint, path, obstacles, isReverse);
-                Console.WriteLine($"Optimal detour point: {optimalDetourPoint}");
-            }
+                new List<Point> { new Point(3, 3), new Point(5, 3), new Point(5, 5), new Point(3, 5) },
+                new List<Point> { new Point(6, 6), new Point(8, 6), new Point(8, 7), new Point(6, 7) }
+            };
 
-            List<(int X, int Y)>? finalEdges = bestEdgePoint != (-1, -1) ? [bestEdgePoint] : null;
+        // Create the Tangent Bug algorithm instance
+        var tangentBug = new TangentBugAlgorithm(start, goal, obstacles, sensorRange: 5, stepSize: 0.2);
 
-            DisplayMap(mapSize, start, goal, obstacles, path, finalEdges, optimalDetourPoint);
-        }
-    }
+        // Find the path
+        var path = tangentBug.FindPath();
 
-    static void DisplayMap(int size, (int X, int Y) start, (int X, int Y) goal, HashSet<(int X, int Y)> obstacles, List<(int X, int Y)> path, List<(int X, int Y)>? edges, (int X, int Y)? detourPoint)
-    {
-        char[,] map = new char[size, size];
-
-        // Initialize map
-        for (int y = 0; y < size; y++)
+        // Print the path
+        Console.WriteLine("Path found:");
+        foreach (var point in path)
         {
-            for (int x = 0; x < size; x++)
-            {
-                map[y, x] = '.';
-            }
-        }
-
-        map[start.Y, start.X] = 'S';
-        map[goal.Y, goal.X] = 'E';
-
-        foreach (var (X, Y) in obstacles)
-        {
-            if (Y >= 0 && Y < size && X >= 0 && X < size)
-                map[Y, X] = 'X';
-        }
-
-        foreach (var (X, Y) in path)
-        {
-            if (Y >= 0 && Y < size && X >= 0 && X < size && map[Y, X] == '.')
-                map[Y, X] = 'P';
-        }
-
-        if (edges != null)
-        {
-            foreach (var (X, Y) in edges)
-            {
-                if (Y >= 0 && Y < size && X >= 0 && X < size)
-                {
-                    map[Y, X] = 'O';
-                }
-            }
-        }
-
-        if (detourPoint.HasValue)
-        {
-            if (detourPoint.Value.Y >= 0 && detourPoint.Value.Y < size && detourPoint.Value.X >= 0 && detourPoint.Value.X < size)
-                map[detourPoint.Value.Y, detourPoint.Value.X] = 'D';
-        }
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                Console.Write(map[y, x] + " ");
-            }
-            Console.WriteLine();
+            Console.WriteLine($"({point.X:F2}, {point.Y:F2})");
         }
     }
 }
