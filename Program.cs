@@ -1,4 +1,6 @@
-﻿namespace bw_path_finding;
+﻿using System.Diagnostics.Contracts;
+
+namespace bw_path_finding;
 
 public class PathFinder
 {
@@ -16,7 +18,8 @@ public class PathFinder
             (int X, int Y) end,
             HashSet<(int X, int Y)> obstacles,
             bool isReverse = false,
-            int mapSize = 15
+            int mapSize = 15,
+            int sight = 30
         )
     {
         var path = new List<(int X, int Y)>();
@@ -63,6 +66,32 @@ public class PathFinder
         return (path, []); // Reached the destination
     }
 
+    public List<(int X, int Y)> GetAllValidEdges((int X, int Y) start, (int X, int Y) targetEdge, int sight, HashSet<(int X, int Y)> obstacles, int mapSize) {
+        var validEdges = new List<(int X, int Y)>();
+        var checkedEdges = new HashSet<(int X, int Y)>();
+        int currentX = targetEdge.X;
+        int currentY = targetEdge.Y;
+
+        var neighbors = GetAdjacentTiles((currentX, currentY));
+        foreach(var neighbor in neighbors) {
+            if(checkedEdges.Contains(neighbor)) { continue; }
+            checkedEdges.Add(neighbor);
+
+            // check if it is out of boundary
+            if(neighbor.X < 0 || neighbor.X >= mapSize || neighbor.Y < 0 || neighbor.Y >= mapSize) { continue; }
+
+            // check if it is edge
+            var nearTiles = GetAdjacentTiles((neighbor.X, neighbor.Y));
+            foreach(var tile in nearTiles) {
+                if(!obstacles.Contains(tile)) {
+                    validEdges.Add(neighbor);
+                    break;
+                }
+            }
+        }
+        return validEdges;
+    }
+
     /// <summary>
     /// Explores the edge of the obstacle encountered from the starting point to find possible detour points.
     /// </summary>
@@ -80,6 +109,7 @@ public class PathFinder
             int mapSize = 15
         )
     {
+        Console.WriteLine("isReverse: " + isReverse);
         var validEdgePoints = new List<(int X, int Y)>();
         var visitedEdges = new HashSet<(int X, int Y)>();
         var queue = new Queue<(int X, int Y)>();
@@ -355,13 +385,108 @@ public class PathFinder
                 err += dx;
                 y += sy;
             }
+        }
+    }
 
-            // Safety break
-            if (Math.Abs(x - start.X) > Math.Abs(end.X - start.X) + 1 || Math.Abs(y - start.Y) > Math.Abs(end.Y - start.Y) + 1)
+    public List<(int X, int Y)> GetConnectedObstacles((int X, int Y) startTile, List<(int X, int Y)> obstacles)
+    {
+        var connected = new List<(int X, int Y)>();
+        var visited = new HashSet<(int X, int Y)>();
+        var queue = new Queue<(int X, int Y)>();
+
+        if (!obstacles.Contains(startTile)) return connected;
+
+        queue.Enqueue(startTile);
+        visited.Add(startTile);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            connected.Add(current);
+
+            var neighbors = new List<(int X, int Y)>
             {
-                return false;
+                (current.X - 1, current.Y),
+                (current.X + 1, current.Y),
+                (current.X, current.Y - 1),
+                (current.X, current.Y + 1)
+            };
+
+            foreach (var neighbor in neighbors)
+            {
+                if (obstacles.Contains(neighbor) && !visited.Contains(neighbor))
+                {
+                    queue.Enqueue(neighbor);
+                    visited.Add(neighbor);
+                }
             }
         }
+
+        Console.WriteLine("Connected Obstacles:");
+        foreach (var tile in connected)
+        {
+            Console.WriteLine($"Obstacle: {tile.X}:{tile.Y}");
+        }
+
+        return connected;
+    }
+
+    public List<(int X, int Y)> GetObstacleEdges(List<(int X, int Y)> obstacles)
+    {
+        var edges = new List<(int X, int Y)>();
+        var obstacleSet = new HashSet<(int X, int Y)>(obstacles);
+
+        foreach (var tile in obstacles)
+        {
+            var neighbors = new List<(int X, int Y)>
+            {
+                (tile.X, tile.Y - 1),
+                (tile.X, tile.Y + 1),
+                (tile.X - 1, tile.Y),
+                (tile.X + 1, tile.Y)
+            };
+
+            if (neighbors.Exists(n => !obstacleSet.Contains(n)))
+            {
+                edges.Add(tile);
+            }
+        }
+
+        Console.WriteLine("Detected Obstacle Edges:");
+        foreach (var edge in edges)
+        {
+            Console.WriteLine($"Edge: {edge.X}:{edge.Y}");
+        }
+
+        return edges;
+    }
+
+    public ((int X, int Y), (int X, int Y))? FindOuterMostEdges((int X, int Y) start, List<(int X, int Y)> validEdges)
+    {
+        if (validEdges == null || validEdges.Count < 2)
+        {
+            return null; // Not enough valid edges to find outermost
+        }
+
+        // Calculate the angle from the start point to each valid edge.
+        var angles = validEdges.Select(edge => new
+        {
+            Edge = edge,
+            Angle = Math.Atan2(edge.Y - start.Y, edge.X - start.X)
+        }).ToList();
+
+        // Sort the angles in ascending order.
+        angles.Sort((a, b) => a.Angle.CompareTo(b.Angle));
+
+        // The first element in the sorted list will have the smallest angle (leftmost),
+        // and the last element will have the largest angle (rightmost).
+        var leftmost = angles.First().Edge;
+        var rightmost = angles.Last().Edge;
+
+        Console.WriteLine($"Leftmost Edge: {leftmost.X}:{leftmost.Y}");
+        Console.WriteLine($"Rightmost Edge: {rightmost.X}:{rightmost.Y}");
+
+        return (leftmost, rightmost);
     }
 }
 
@@ -372,15 +497,15 @@ class Program
         
         var start = (X: -1, Y: -1); var goal = (X: -1, Y: -1);
         start = (X: 0, Y: 0); goal = (X: 0, Y: 14);
-        start = (X: 0, Y: 0); goal = (X: 5, Y: 7);
-        start = (X: 5, Y: 7); goal = (X: 0, Y: 14);
-        start = (X: 5, Y: 8); goal = (X: 0, Y: 14);
-        start = (X: 5, Y: 9); goal = (X: 0, Y: 14);
-        start = (X: 4, Y: 11); goal = (X: 0, Y: 14);
+        // start = (X: 0, Y: 0); goal = (X: 4, Y: 6);
+        // start = (X: 4, Y: 6); goal = (X: 0, Y: 14);
+        // start = (X: 3, Y: 6); goal = (X: 0, Y: 14);
 
         var obstacles = new HashSet<(int X, int Y)>
         {
-                (1, 6),     (2, 6),
+                                                            (5, 4),
+                                                            (5, 5),
+                (1, 6),     (2, 6),                         (5, 6),
         (0, 7), (1, 7),     (2, 7),     (3, 7),     (4, 7),
                 (1, 8),     (2, 8),     (3, 8),     (4, 8),
                 (1, 9),     (2, 9),     (3, 9),
