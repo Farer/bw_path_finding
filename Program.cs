@@ -1,9 +1,134 @@
-﻿using System.Diagnostics.Contracts;
-
-namespace bw_path_finding;
+﻿namespace bw_path_finding;
 
 public class PathFinder
 {
+    // 캐싱을 위한 Dictionary (인스턴스 별로 관리)
+    private Dictionary<((int X, int Y) start, (int X, int Y) end), bool> _reachableCache = new Dictionary<((int X, int Y) start, (int X, int Y) end), bool>();
+
+    public HashSet<(int X, int Y)> GetAllValidEdges((int X, int Y) start, (int X, int Y) targetEdge, int sight, HashSet<(int X, int Y)> obstacles, int mapSize)
+    {
+        var validEdges = new HashSet<(int X, int Y)>();
+        var queue = new Queue<((int X, int Y) point, int distance)>();
+        var visited = new HashSet<(int X, int Y)>();
+
+        queue.Enqueue((targetEdge, 0));
+        visited.Add(targetEdge);
+
+        while (queue.Count > 0)
+        {
+            var (currentPoint, distance) = queue.Dequeue();
+
+            if (distance > sight)
+            {
+                continue;
+            }
+
+            // Check if the current point is a valid edge
+            var nearTiles = GetNearTiles(currentPoint);
+            if (nearTiles.Any(tile => !obstacles.Contains(tile) && IsReachable(start, currentPoint, obstacles)))
+            {
+                validEdges.Add(currentPoint);
+            }
+
+            // Explore neighbors
+            foreach (var neighbor in GetAdjacentTiles(currentPoint))
+            {
+                
+                if (neighbor.X >= 0 && neighbor.X < mapSize && neighbor.Y >= 0 && neighbor.Y < mapSize &&
+                    obstacles.Contains(neighbor) && !visited.Contains(neighbor))
+                {
+                    visited.Add(neighbor);
+                    queue.Enqueue((neighbor, distance + 1));
+                }
+            }
+        }
+
+        return validEdges;
+    }
+
+    /// <summary>
+    /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path (Bresenham's line algorithm).
+    /// 캐싱 기능을 추가했습니다.
+    /// </summary>
+    /// <param name="start">The starting point coordinates.</param>
+    /// <param name="end">The destination point coordinates.</param>
+    /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
+    /// <returns>True if the end point is reachable, false otherwise.</returns>
+    private bool IsReachable((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
+    {
+        var cacheKey = (start, end);
+        if (_reachableCache.TryGetValue(cacheKey, out bool isReachable))
+        {
+            return isReachable;
+        }
+
+        int x = start.X;
+        int y = start.Y;
+        int dx = Math.Abs(end.X - start.X);
+        int dy = Math.Abs(end.Y - start.Y);
+        int sx = start.X < end.X ? 1 : -1;
+        int sy = start.Y < end.Y ? 1 : -1;
+        int err = dx - dy;
+
+        while (true)
+        {
+            if (obstacles.Contains((x, y)) && (x, y) != end)
+            {
+                _reachableCache[cacheKey] = false;
+                return false;
+            }
+
+            if (x == end.X && y == end.Y)
+            {
+                _reachableCache[cacheKey] = true;
+                return true;
+            }
+
+            int e2 = 2 * err;
+            if (e2 > -dy)
+            {
+                err -= dy;
+                x += sx;
+            }
+            else if (e2 < dx)
+            {
+                err += dx;
+                y += sy;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the adjacent tiles of a given tile.
+    /// </summary>
+    /// <param name="tile">The reference tile coordinates.</param>
+    /// <returns>An enumerable of adjacent tile coordinates.</returns>
+    private static IEnumerable<(int X, int Y)> GetAdjacentTiles((int X, int Y) tile)
+    {
+        yield return (tile.X - 1, tile.Y);
+        yield return (tile.X + 1, tile.Y);
+        yield return (tile.X, tile.Y - 1);
+        yield return (tile.X, tile.Y + 1);
+        yield return (tile.X - 1, tile.Y - 1);
+        yield return (tile.X - 1, tile.Y + 1);
+        yield return (tile.X + 1, tile.Y - 1);
+        yield return (tile.X + 1, tile.Y + 1);
+    }
+
+    // GetAdjacentTiles 와 동일한 기능을 합니다. 필요에 따라 이름을 조정하세요.
+    private static IEnumerable<(int X, int Y)> GetNearTiles((int X, int Y) tile)
+    {
+        yield return (tile.X - 1, tile.Y);
+        yield return (tile.X + 1, tile.Y);
+        yield return (tile.X, tile.Y - 1);
+        yield return (tile.X, tile.Y + 1);
+        yield return (tile.X - 1, tile.Y - 1);
+        yield return (tile.X - 1, tile.Y + 1);
+        yield return (tile.X + 1, tile.Y - 1);
+        yield return (tile.X + 1, tile.Y + 1);
+    }
+
+    #region 나머지 코드는 이전과 동일합니다.
     /// <summary>
     /// Finds a path from the start point to the end point, stopping immediately upon encountering an obstacle and
     /// efficiently identifying valid detour points by exploring the obstacle's edge.
@@ -64,32 +189,6 @@ public class PathFinder
         }
 
         return (path, []); // Reached the destination
-    }
-
-    public List<(int X, int Y)> GetAllValidEdges((int X, int Y) start, (int X, int Y) targetEdge, int sight, HashSet<(int X, int Y)> obstacles, int mapSize) {
-        var validEdges = new List<(int X, int Y)>();
-        var checkedEdges = new HashSet<(int X, int Y)>();
-        int currentX = targetEdge.X;
-        int currentY = targetEdge.Y;
-
-        var neighbors = GetAdjacentTiles((currentX, currentY));
-        foreach(var neighbor in neighbors) {
-            if(checkedEdges.Contains(neighbor)) { continue; }
-            checkedEdges.Add(neighbor);
-
-            // check if it is out of boundary
-            if(neighbor.X < 0 || neighbor.X >= mapSize || neighbor.Y < 0 || neighbor.Y >= mapSize) { continue; }
-
-            // check if it is edge
-            var nearTiles = GetAdjacentTiles((neighbor.X, neighbor.Y));
-            foreach(var tile in nearTiles) {
-                if(!obstacles.Contains(tile)) {
-                    validEdges.Add(neighbor);
-                    break;
-                }
-            }
-        }
-        return validEdges;
     }
 
     /// <summary>
@@ -206,7 +305,6 @@ public class PathFinder
             IsWithinMapBounds(currentEdge.X + dir.Item1, currentEdge.Y + dir.Item2, mapSize, mapSize)
         ).ToList();
 
-
         var startEdge = currentEdge;
         var currentEdgePoint = startEdge;
 
@@ -252,24 +350,6 @@ public class PathFinder
     private bool IsWithinMapBounds(int x, int y, int mapWidth, int mapHeight)
     {
         return x >= 0 && x < mapWidth && y >= 0 && y < mapHeight;
-    }
-
-
-    /// <summary>
-    /// Returns the adjacent tiles of a given tile.
-    /// </summary>
-    /// <param name="tile">The reference tile coordinates.</param>
-    /// <returns>An enumerable of adjacent tile coordinates.</returns>
-    private static IEnumerable<(int X, int Y)> GetAdjacentTiles((int X, int Y) tile)
-    {
-        yield return (tile.X - 1, tile.Y);
-        yield return (tile.X + 1, tile.Y);
-        yield return (tile.X, tile.Y - 1);
-        yield return (tile.X, tile.Y + 1);
-        yield return (tile.X - 1, tile.Y - 1);
-        yield return (tile.X - 1, tile.Y + 1);
-        yield return (tile.X + 1, tile.Y - 1);
-        yield return (tile.X + 1, tile.Y + 1);
     }
 
     /// <summary>
@@ -343,49 +423,6 @@ public class PathFinder
         int dx = p1.X - p2.X;
         int dy = p1.Y - p2.Y;
         return Math.Sqrt(dx * dx + dy * dy);
-    }
-
-    /// <summary>
-    /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path (Bresenham's line algorithm).
-    /// </summary>
-    /// <param name="start">The starting point coordinates.</param>
-    /// <param name="end">The destination point coordinates.</param>
-    /// <param name="obstacles">A hash set of obstacle coordinates for quick lookup.</param>
-    /// <returns>True if the end point is reachable, false otherwise.</returns>
-    private bool IsReachable((int X, int Y) start, (int X, int Y) end, HashSet<(int X, int Y)> obstacles)
-    {
-        int x = start.X;
-        int y = start.Y;
-        int dx = Math.Abs(end.X - start.X);
-        int dy = Math.Abs(end.Y - start.Y);
-        int sx = start.X < end.X ? 1 : -1;
-        int sy = start.Y < end.Y ? 1 : -1;
-        int err = dx - dy;
-
-        while (true)
-        {
-            if (obstacles.Contains((x, y)) && (x, y) != end)
-            {
-                return false;
-            }
-
-            if (x == end.X && y == end.Y)
-            {
-                return true;
-            }
-
-            int e2 = 2 * err;
-            if (e2 > -dy)
-            {
-                err -= dy;
-                x += sx;
-            }
-            else if (e2 < dx)
-            {
-                err += dx;
-                y += sy;
-            }
-        }
     }
 
     public List<(int X, int Y)> GetConnectedObstacles((int X, int Y) startTile, List<(int X, int Y)> obstacles)
@@ -488,13 +525,15 @@ public class PathFinder
 
         return (leftmost, rightmost);
     }
+    #endregion
 }
 
 class Program
 {
     static void Main()
     {
-        
+        var pathFinder = new PathFinder();
+        var mapSize = 15;
         var start = (X: -1, Y: -1); var goal = (X: -1, Y: -1);
         start = (X: 0, Y: 0); goal = (X: 0, Y: 14);
         // start = (X: 0, Y: 0); goal = (X: 4, Y: 6);
@@ -511,44 +550,51 @@ class Program
                 (1, 9),     (2, 9),     (3, 9),
                                         (3, 10)
         };
+        
 
-        var pathFinder = new PathFinder();
-        var mapSize = 15;
-
-        var (path, validSearchEdges) = pathFinder.FindPathUntilObstacle(start, goal, obstacles, false, mapSize);
-
-        if (validSearchEdges.Count == 0)
+        var allValidEdges = pathFinder.GetAllValidEdges(start, (0, 7), 15, obstacles, mapSize);
+        foreach (var edge in allValidEdges)
         {
-            DisplayMap(mapSize, start, goal, obstacles, path, null, null);
+            Console.WriteLine($"Valid Edge: {edge}");
         }
-        else if (validSearchEdges.Count > 0)
-        {
-            bool isReverse = false;
-            var (X, Y) = validSearchEdges.Last();
-            if (X <= 0 || X >= mapSize - 1)
-            {
-                isReverse = true;
-                (path, validSearchEdges) = pathFinder.FindPathUntilObstacle(start, goal, obstacles, true, mapSize);
-                if (validSearchEdges.Count == 0)
-                {
-                    DisplayMap(mapSize, start, goal, obstacles, path, null, null);
-                }
-            }
-            var bestEdgePoint = validSearchEdges.Last();
-            (int X, int Y)? optimalDetourPoint = null;
-            if (bestEdgePoint != (-1, -1))
-            {
-                optimalDetourPoint = pathFinder.FindOptimalDetourPoint(start, goal, bestEdgePoint, path, obstacles, isReverse);
-                Console.WriteLine($"Optimal detour point: {optimalDetourPoint}");
-            }
+        Environment.Exit(0);
 
-            List<(int X, int Y)>? finalEdges = bestEdgePoint != (-1, -1) ? [bestEdgePoint] : null;
+        // int sight = 5; // 시야 거리 설정
 
-            DisplayMap(mapSize, start, goal, obstacles, path, finalEdges, optimalDetourPoint);
-        }
+        // var (path, validSearchEdges) = pathFinder.FindPathUntilObstacle(start, goal, obstacles, false, mapSize, sight);
+
+        // if (validSearchEdges.Count == 0)
+        // {
+        //     DisplayMap(mapSize, start, goal, obstacles, path, null, null);
+        // }
+        // else if (validSearchEdges.Count > 0)
+        // {
+        //     bool isReverse = false;
+        //     var (X, Y) = validSearchEdges.Last();
+        //     if (X <= 0 || X >= mapSize - 1)
+        //     {
+        //         isReverse = true;
+        //         (path, validSearchEdges) = pathFinder.FindPathUntilObstacle(start, goal, obstacles, true, mapSize, sight);
+        //         if (validSearchEdges.Count == 0)
+        //         {
+        //             DisplayMap(mapSize, start, goal, obstacles, path, null, null);
+        //         }
+        //     }
+        //     var bestEdgePoint = validSearchEdges.Last();
+        //     var allValidEdges = pathFinder.GetAllValidEdges(start, bestEdgePoint, sight, obstacles, mapSize);
+        //     (int X, int Y)? optimalDetourPoint = null;
+        //     if (bestEdgePoint != (-1, -1))
+        //     {
+        //         optimalDetourPoint = pathFinder.FindOptimalDetourPoint(start, goal, bestEdgePoint, path, obstacles, isReverse);
+        //         Console.WriteLine($"Optimal detour point: {optimalDetourPoint}");
+        //     }
+
+
+        //     DisplayMap(mapSize, start, goal, obstacles, path, allValidEdges, optimalDetourPoint);
+        // }
     }
 
-    static void DisplayMap(int size, (int X, int Y) start, (int X, int Y) goal, HashSet<(int X, int Y)> obstacles, List<(int X, int Y)> path, List<(int X, int Y)>? edges, (int X, int Y)? detourPoint)
+    static void DisplayMap(int size, (int X, int Y) start, (int X, int Y) goal, HashSet<(int X, int Y)> obstacles, List<(int X, int Y)> path, HashSet<(int X, int Y)>? edges, (int X, int Y)? detourPoint)
     {
         char[,] map = new char[size, size];
 
