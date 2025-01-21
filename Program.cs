@@ -272,7 +272,7 @@ public class PathFinder(
         return (false, []);
     }
     /// <summary>
-    /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path (Bresenham"s line algorithm).
+    /// Checks if the end point is reachable from the start point without crossing any obstacles using a straight-line path (Bresenham's line algorithm).
     /// </summary>
     public (bool, (int X, int Y), List<(int X, int Y)>) IsReachableDirectly((int X, int Y) from, (int X, int Y) to)
     {
