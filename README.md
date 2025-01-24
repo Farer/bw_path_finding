@@ -1,5 +1,8 @@
 ![ezgif-7-1943443c6d](https://github.com/user-attachments/assets/ad4c7369-b042-41b7-943f-40f74c1dfcb8)
 
+> [!NOTE]
+> This source code has not been refactored.
+
 ## Research on a new method of pathfinding algorithm for performance improvement
 The existing A* algorithm is very well-known and has already been proven to deliver sufficiently good performance.  
 However, despite my limited skills and knowledge, I am challenging myself in this project to implement a pathfinding algorithm that performs far better than this.  
