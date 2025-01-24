@@ -470,61 +470,7 @@ public class PathFinder(
         }
         return closestDetour;
     }
-
-    // public (int X, int Y) DetermineFinalTargetEdge(((int X, int Y), (int X, int Y)) outerMostEdges, int mapSize)
-    // {
-    //     var leftNearTiles = GetNearTiles(outerMostEdges.Item1);
-    //     bool isLeftOutOfMap = false;
-    //     foreach (var tile in leftNearTiles)
-    //     {
-    //         // Console.WriteLine($"Left near tile: {tile}");
-    //         if (tile.X < 0 || tile.X >= mapSize || tile.Y < 0 || tile.Y >= mapSize)
-    //         {
-    //             isLeftOutOfMap = true;
-    //             Console.WriteLine($"out of Map: {tile}");
-    //             break;
-    //         }
-    //     }
-
-    //     var rightNearTiles = GetNearTiles(outerMostEdges.Item2);
-    //     bool isRightOutOfMap = false;
-    //     foreach (var tile in rightNearTiles)
-    //     {
-    //         Console.WriteLine($"Right near tile: {tile}");
-    //         if (tile.X < 0 || tile.X >= mapSize || tile.Y < 0 || tile.Y >= mapSize)
-    //         {
-    //             isRightOutOfMap = true;
-    //             Console.WriteLine($"out of Map: {tile}");
-    //             break;
-    //         }
-    //     }
-
-    //     if (isLeftOutOfMap && isRightOutOfMap)
-    //     {
-    //         Console.WriteLine("Both edges are near the border");
-    //         return (-1, -1);
-    //     }
-    //     else if (isLeftOutOfMap)
-    //     {
-    //         Console.WriteLine("Left edge is near the border");
-    //         return outerMostEdges.Item2;
-    //     }
-    //     else if (isRightOutOfMap)
-    //     {
-    //         Console.WriteLine("Right edge is near the border");
-    //         return outerMostEdges.Item1;
-    //     }
-    //     else
-    //     {
-    //         Console.WriteLine("Both edges are not near the border");
-
-    //     }
-    // }
-    public void DisplayMap(
-        List<(int X, int Y)>? path,
-        List<(int X, int Y)>? detourPoint,
-        (int X, int Y)? hitObstacle
-    )
+    public void DisplayMap(List<(int X, int Y)>? path, List<(int X, int Y)>? detourPoint, (int X, int Y)? hitObstacle )
     {
         string[,] map = new string[MapWidth + 1, MapHeight];
         string charLand = "·".PadLeft(2);
@@ -976,8 +922,6 @@ public class PathFinder(
 
         return bestDetourPoint;
     }
-    // TODO: 도착지점 이전지점과 도착지점의 좌표가 X 또는 Y 가 동일하면 그걸 축약해버리고 있음.
-    // 이거 필터링 해야 함
     public static List<(int X, int Y)> SimplifyWaypoints(List<(int X, int Y)> waypoints)
     {
         if (waypoints.Count < 2) { return waypoints; }
@@ -1201,7 +1145,7 @@ class Program
             }
         }
 
-        return new List<(int X, int Y)>(); // 경로를 찾지 못한 경우 빈 리스트 반환
+        return [];
     }
 
     static int Heuristic((int X, int Y) a, (int X, int Y) b)
