@@ -2,6 +2,8 @@
 
 > [!NOTE]
 > This source code has not been refactored.
+>
+> Pull requests are more than welcome.
 
 ## Research on a new method of pathfinding algorithm for performance improvement
 The existing A* algorithm is very well-known and has already been proven to deliver sufficiently good performance.  
