@@ -1,6 +1,8 @@
 ![ezgif-7-1943443c6d](https://github.com/user-attachments/assets/ad4c7369-b042-41b7-943f-40f74c1dfcb8)
 
 > [!NOTE]
+> This source code was developed using .NET 8.0.
+> 
 > This source code has not been refactored.
 >
 > Pull requests are more than welcome.
