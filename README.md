@@ -65,3 +65,6 @@ In this case, the algorithm is simpler but may sometimes perform slower than A*.
 
 ## Projects that use this algorithm
 [Breathing World](https://breathingworld.com)
+
+> [!TIP]
+> If your project happens to use this algorithm, please let me know.
