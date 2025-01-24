@@ -56,7 +56,9 @@ In this case, the algorithm is simpler but may sometimes perform slower than A*.
 - Anya
 - Tangent Bug
 
-## Related blog posts
+## Related articles
+[Ask HN: Have you ever seen a pathfinding algorithm of this type?](https://news.ycombinator.com/item?id=42608107)
+
 [Research on a new method of pathfinding algorithm for performance improvement](https://blog.breathingworld.com/research-on-a-new-method-of-pathfinding-algorithm-for-performance-improvement/)
 
 ## Projects that use this algorithm
