@@ -55,3 +55,6 @@ In this case, the algorithm is simpler but may sometimes perform slower than A*.
 - main : BW algorithm
 - Anya
 - Tangent Bug
+
+## Projects that use this algorithm
+[Breathing World](https://breathingworld.com)
