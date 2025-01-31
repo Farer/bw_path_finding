@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.Serialization;
 
 namespace bw_path_finding;
 public enum PathCase
@@ -1191,6 +1192,48 @@ class Program
                         (1, 11),    (2, 11)
         };
 
+        // (50, 50)
+        obstacles.Add((57,47));
+        obstacles.Add((57,46));
+        obstacles.Add((56,46));
+        obstacles.Add((55,46));
+        obstacles.Add((55,46));
+        obstacles.Add((55,45));
+        obstacles.Add((54,45));
+        obstacles.Add((53,45));
+        obstacles.Add((52,45));
+        obstacles.Add((51,45));
+        obstacles.Add((50,45));
+        obstacles.Add((49,45));
+        obstacles.Add((48,45));
+        obstacles.Add((47,45));
+        obstacles.Add((46,45));
+        obstacles.Add((45,45));
+        obstacles.Add((44,45));
+        obstacles.Add((44,46));
+        obstacles.Add((43,46));
+        obstacles.Add((43,47));
+        obstacles.Add((43,48));
+        obstacles.Add((42,48));
+        obstacles.Add((42,49));
+        obstacles.Add((41,49));
+        obstacles.Add((41,50));
+        obstacles.Add((41,51));
+        obstacles.Add((41,52));
+        obstacles.Add((41,53));
+        obstacles.Add((41,54));
+        obstacles.Add((42,54));
+        obstacles.Add((42,55));
+        obstacles.Add((42,56));
+        obstacles.Add((43,56));
+        obstacles.Add((43,57));
+        obstacles.Add((44,57));
+        obstacles.Add((44,58));
+        obstacles.Add((45,58));
+        obstacles.Add((45,59));
+        obstacles.Add((46,59));
+        obstacles.Add((47,59));
+
         var sightRange = 15;
         var moveRange = 15;
         (int X, int Y) tileRangeStart = (0, 0);
@@ -1199,9 +1242,11 @@ class Program
         var hitObstacle = (-1, -1);
         var start = (-1, -1); var goal = (-1, -1);
         start = (7, 3); goal = (9, 4); closed = [];
-        start = (7, 3); goal = (100, 100); closed = [];
-        start = (7, 3); goal = (150, 150); closed = [];
+        start = (7, 3); goal = (50, 50); closed = [];
+        // start = (7, 3); goal = (100, 100); closed = [];
+        // start = (7, 3); goal = (150, 150); closed = [];
         // start = (7, 3); goal = (200, 200); closed = [];
+        // start = (7, 3); goal = (250, 250); closed = [];
         // start = (7, 3); goal = (300, 300); closed = [];
         // start = (3, 4); goal = (9, 4); closed = [(7,3)]; hitObstacle = (8,3);
         // start = (2, 4); goal = (9, 4); closed = [(2,4),(3,4),(7,3),]; hitObstacle = (7,4);
@@ -1226,6 +1271,7 @@ class Program
         stopwatch.Start();
         var (finalPath, pathCase) = FindPathRecursive(pathFinder, []);
         stopwatch.Stop();
+        Console.WriteLine("Start: " + start + " -> Goal: " + goal);
         Console.WriteLine("BW Total Elapsed time: " + stopwatch.ElapsedMilliseconds + "ms");
         Console.WriteLine("pathCase: " + pathCase);
         foreach (var item in finalPath)
@@ -1255,7 +1301,7 @@ class Program
 
         pathFinder.Start = lastPath;
         pathFinder.PreviousHitObstacle = pathFinder.HitObstacle;
-        pathFinder.Closed = [.. path];
+        foreach(var item in path) { pathFinder.Closed.Add(item); }
 
         return FindPathRecursive(pathFinder, currentPath);
     }
