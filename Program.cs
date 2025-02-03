@@ -630,7 +630,6 @@ public class PathFinder(
 
         var adjustedTiles = new List<(int X, int Y)>();
         var plusMinusX = 0; var plusMinusY = 0;
-        if (targetLocation == Location.up) { plusMinusX = 0; plusMinusY = -2; }
         switch (targetLocation)
         {
             case Location.up: plusMinusX = 0; plusMinusY = -2; break;
