@@ -415,7 +415,8 @@ public class PathFinder(
     public static ((int X, int Y), (int X, int Y))? FindOuterMostTiles((int X, int Y) originTile, List<(int X, int Y)> validEdgeTiles)
     {
         // Not enough valid edges to find outermost
-        if (validEdgeTiles == null || validEdgeTiles.Count < 2) { return null; }
+        if (validEdgeTiles == null) { return null; }
+        if( validEdgeTiles.Count == 1) { return (validEdgeTiles[0], validEdgeTiles[0]); }
 
         // Calculate the angle from the origin point to each valid edge.
         var angles = validEdgeTiles.Select(edge => new
@@ -809,12 +810,9 @@ public class PathFinder(
     }
     public (int X, int Y) ProceedNormalSearch()
     {
-        Console.WriteLine("Proceed Normal Search | Start: " + Start + " | HitObstacle: " + HitObstacle + " | SightRange: " + SightRange);
         var distanceFromStartToHitObstacle = CalculateDistance(Start, HitObstacle);
-        if(distanceFromStartToHitObstacle > 10) {
-            PreviousOrigin = Start;
-            Console.WriteLine("Will Move long way to hit obstacle | PreviousOrigin: " + PreviousOrigin);
-        }
+        // Will Move long way to hit obstacle
+        if(distanceFromStartToHitObstacle > 10) { PreviousOrigin = Start; }
         // Stopwatch stopwatch = new();
         var hitObstacleDirection = DetermineHitObstacleContinueToOneDirection();
 
