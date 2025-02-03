@@ -901,7 +901,7 @@ public class PathFinder(
             var rightDistanceToGoal = CalculateDistance(target, right);
             var rightTotalDistance = rightDistanceFromStart + rightDistanceToGoal;
 
-            var closeAngleToTargetDetourPoint = FindClosestDetourToTarget(origin, target, [left, right]);
+            // var closeAngleToTargetDetourPoint = FindClosestDetourToTarget(origin, target, [left, right]);
 
             // Console.WriteLine("[ Left ] from origin: " + leftDistanceFromStart + ", to target: " + leftDistanceToGoal);
             // Console.WriteLine("leftTotalDistance: " + leftTotalDistance);
