@@ -875,11 +875,13 @@ public class PathFinder(
         }
         // Console.WriteLine();
 
+        if(bestDetourCandidatesList.Count == 1) { return bestDetourCandidatesList[0];}
+
         var outerMostTiles = FindOuterMostTiles(origin, bestDetourCandidatesList);
         if (outerMostTiles is null) { return (-1, -1); }
+
         var left = outerMostTiles!.Value.Item1;
         var right = outerMostTiles!.Value.Item2;
-        if(left == right) { return left; }
 
         (int X, int Y) bestDetourPoint = (-1, -1);
 
@@ -985,6 +987,7 @@ public class PathFinder(
         var left = outerMostEdges!.Value.Item1;
         var right = outerMostEdges!.Value.Item2;
         if(left == right) { return left; }
+        
         bool isLeftNearTheBorder = HasNeighborOutOfBound(left);
         bool isRightNearTheBorder = HasNeighborOutOfBound(right);
 
