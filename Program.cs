@@ -60,6 +60,7 @@ public class PathFinder(
     public List<(int X, int Y)> Waypoints = [];
     // from, to, (isReachableDirectly, hitObstacle, path)
     private readonly ConcurrentDictionary<((int X, int Y) from, (int X, int Y) to), (bool, (int X, int Y), List<(int X, int Y)>)> CacheReachableDirectly = new();
+    private (int X, int Y) PreviousOrigin = (-1, -1);
     public long ElapsedTime = 0L;
     public List<(int X, int Y)> GetAllValidEdgesFromHitObstacle((int X, int Y) origin, (int X, int Y) hitObstacle, int sightRange, HashSet<(int X, int Y)> obstacles)
     {
@@ -462,17 +463,17 @@ public class PathFinder(
         bool isReachable = false
     )
     {
-        var finalCandidates = new List<(int, int)>();
+        var finalCandidates = new List<(int X, int Y)>();
         foreach (var item in targets)
         {
-            if (isReachable)
-            {
+            if(Obstacles.Contains(item)) { continue; }
+            if (isReachable) {
                 if (origin != item && IsReachableDirectly(origin, item).Item1) { finalCandidates.Add(item); }
             }
             else { finalCandidates.Add(item); }
         }
         // calculate the angle (in radians)
-        List<(double angle, (int x, int y) target)> angles = [.. targets.Select(target => {
+        List<(double angle, (int x, int y) target)> angles = [.. finalCandidates.Select(target => {
             double angle = Math.Atan2(target.Y - origin.Y, target.X - origin.X);
             return (angle, target);
         })];
@@ -808,7 +809,12 @@ public class PathFinder(
     }
     public (int X, int Y) ProceedNormalSearch()
     {
-        // Console.WriteLine("Proceed Normal Search");
+        Console.WriteLine("Proceed Normal Search | Start: " + Start + " | HitObstacle: " + HitObstacle + " | SightRange: " + SightRange);
+        var distanceFromStartToHitObstacle = CalculateDistance(Start, HitObstacle);
+        if(distanceFromStartToHitObstacle > 10) {
+            PreviousOrigin = Start;
+            Console.WriteLine("Will Move long way to hit obstacle | PreviousOrigin: " + PreviousOrigin);
+        }
         // Stopwatch stopwatch = new();
         var hitObstacleDirection = DetermineHitObstacleContinueToOneDirection();
 
@@ -838,18 +844,18 @@ public class PathFinder(
         // }
         // Console.WriteLine();
 
-        (int X, int Y) finalDetourPoint;
+        (int X, int Y) bestDetourPoint;
         if (allValidEdges.Count == 1)
         {
-            finalDetourPoint = GetFinalDetourPointWithSingleValidEdge(Start, Goal, allValidEdges[0]);
+            bestDetourPoint = GetBestDetourPointWithSingleValidEdge(Start, Goal, allValidEdges[0]);
         }
         else
         {
-            finalDetourPoint = GetFinalDetourPointWithMiultipleValidEdges(Start, allValidEdges);
+            bestDetourPoint = GetFinalDetourPointWithMiultipleValidEdges(Start, allValidEdges);
         }
-        return finalDetourPoint;
+        return bestDetourPoint;
     }
-    private (int X, int Y) GetFinalDetourPointWithSingleValidEdge((int X, int Y) origin, (int X, int Y) target, (int X, int Y) validEdge)
+    private (int X, int Y) GetBestDetourPointWithSingleValidEdge((int X, int Y) origin, (int X, int Y) target, (int X, int Y) validEdge)
     {
         // Console.WriteLine("Only one valid edge");
 
@@ -857,7 +863,7 @@ public class PathFinder(
         // stopwatch.Start();
 
         var adjacent = GetAdjacentTiles(validEdge);
-        var finalDetourCandidates = new List<(int X, int Y)>();
+        var bestDetourCandidatesList = new List<(int X, int Y)>();
         // if (adjacent.Count > 0) { Console.Write("Adjacent: "); }
         foreach (var item in adjacent)
         {
@@ -865,33 +871,42 @@ public class PathFinder(
             if (Obstacles.Contains(item)) { continue; }
             if (origin == item) { continue; }
             if (IsOutOfBound(item)) { continue; }
-            if (IsReachableDirectly(origin, item).Item1) { finalDetourCandidates.Add(item); }
+            if (IsReachableDirectly(origin, item).Item1) {
+                bestDetourCandidatesList.Add(item);
+            }
         }
         // Console.WriteLine();
 
-        var outerMostTiles = FindOuterMostTiles(origin, finalDetourCandidates);
+        var outerMostTiles = FindOuterMostTiles(origin, bestDetourCandidatesList);
         if (outerMostTiles is null) { return (-1, -1); }
         var left = outerMostTiles!.Value.Item1;
         var right = outerMostTiles!.Value.Item2;
 
-        (int X, int Y) finalDetourPoint = (-1, -1);
+        (int X, int Y) bestDetourPoint = (-1, -1);
 
         bool leftIsClosed = IfClosed(left);
         bool rightIsClosed = IfClosed(right);
-        if (!leftIsClosed && rightIsClosed) { finalDetourPoint = left; }
-        else if (leftIsClosed && !rightIsClosed) { finalDetourPoint = right; }
+        if (!leftIsClosed && rightIsClosed) { bestDetourPoint = left; }
+        else if (leftIsClosed && !rightIsClosed) { bestDetourPoint = right; }
 
-        if (finalDetourPoint == (-1, -1))
+        if (PreviousOrigin != (-1, -1) && bestDetourPoint == (-1, -1)) {
+            var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, left);
+            var distanceFromPreviousOriginToRight = CalculateDistance(PreviousOrigin, right);
+            if (distanceFromPreviousOriginToLeft < distanceFromPreviousOriginToRight) { bestDetourPoint = right; }
+            else if (distanceFromPreviousOriginToRight < distanceFromPreviousOriginToLeft) { bestDetourPoint = left; }
+        }
+
+        if (bestDetourPoint == (-1, -1))
         {
             var leftValidNeighborCount = GetValidAdjacentCount(left);
             var rightValidNeighborCount = GetValidAdjacentCount(right);
             // Console.WriteLine("leftDetourpointValidNeighborCount: " + leftValidNeighborCount);
             // Console.WriteLine("rightDetourpointValidNeighborCount: " + rightValidNeighborCount);
-            if (leftValidNeighborCount > rightValidNeighborCount) { finalDetourPoint = left; }
-            else if (rightValidNeighborCount > leftValidNeighborCount) { finalDetourPoint = right; }
+            if (leftValidNeighborCount > rightValidNeighborCount) { bestDetourPoint = left; }
+            else if (rightValidNeighborCount > leftValidNeighborCount) { bestDetourPoint = right; }
         }
 
-        if (finalDetourPoint == (-1, -1))
+        if (bestDetourPoint == (-1, -1))
         {
             var leftDistanceFromStart = CalculateDistance(origin, left);
             var leftDistanceToGoal = CalculateDistance(target, left);
@@ -914,11 +929,11 @@ public class PathFinder(
 
             if (leftTotalDistance < rightTotalDistance)
             {
-                finalDetourPoint = outerMostTiles!.Value.Item1;
+                bestDetourPoint = outerMostTiles!.Value.Item1;
             }
             else if (leftTotalDistance > rightTotalDistance)
             {
-                finalDetourPoint = outerMostTiles!.Value.Item2;
+                bestDetourPoint = outerMostTiles!.Value.Item2;
             }
             else
             {
@@ -927,11 +942,11 @@ public class PathFinder(
                 var randomIndex = random.Next(0, 2);
                 if (randomIndex == 0)
                 {
-                    finalDetourPoint = outerMostTiles!.Value.Item1;
+                    bestDetourPoint = outerMostTiles!.Value.Item1;
                 }
                 else
                 {
-                    finalDetourPoint = outerMostTiles!.Value.Item2;
+                    bestDetourPoint = outerMostTiles!.Value.Item2;
                 }
             }
         }
@@ -941,7 +956,7 @@ public class PathFinder(
         // Console.WriteLine();
         // Console.WriteLine($"Elapsed time: {stopwatch.ElapsedMilliseconds}ms");
 
-        return finalDetourPoint;
+        return bestDetourPoint;
     }
     private bool IfClosed((int X, int Y) target)
     {
@@ -1042,14 +1057,19 @@ public class PathFinder(
         var (leftMostTarget, rightMostTarget) = FindExtremeAngleTargets(origin, filteredDetourCandidates, true);
         // Console.WriteLine("direction: " + direction);
         var bestDetourPoint = (-1, -1);
-        if (direction == "left")
-        {
-            bestDetourPoint = leftMostTarget;
+
+        if(PreviousOrigin != (-1, -1) && bestDetourPoint == (-1, -1)) {
+            var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, leftMostTarget);
+            var distanceFromPreviousOriginToRight = CalculateDistance(PreviousOrigin, rightMostTarget);
+            if (distanceFromPreviousOriginToLeft < distanceFromPreviousOriginToRight) { bestDetourPoint = rightMostTarget; }
+            else if (distanceFromPreviousOriginToLeft > distanceFromPreviousOriginToRight) { bestDetourPoint = leftMostTarget; }
         }
-        else if (direction == "right")
-        {
-            bestDetourPoint = rightMostTarget;
+
+        if(bestDetourPoint == (-1, -1)) {
+            if (direction == "left") { bestDetourPoint = leftMostTarget; }
+            else if (direction == "right") { bestDetourPoint = rightMostTarget; }
         }
+
         // stopwatch.Stop(); ElapsedTime += stopwatch.ElapsedMilliseconds;
         // Console.WriteLine();
         // Console.WriteLine($"Elapsed time: {stopwatch.ElapsedMilliseconds}ms");
