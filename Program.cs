@@ -67,9 +67,14 @@ public class PathFinder(
         var validEdges = new List<(int X, int Y)>();
         var targetEdgeQueue = new Queue<((int X, int Y) point, int distance)>();
         var visited = new HashSet<(int X, int Y)>();
+        var distanceFromOrigin = CalculateDistance(origin, hitObstacle);
 
         targetEdgeQueue.Enqueue((hitObstacle, 0));
         visited.Add(hitObstacle);
+
+        if(origin == (198, 211)) {
+            Console.WriteLine("origin: " + origin + ", hitObstacle: " + hitObstacle);
+        }
 
         while (targetEdgeQueue.Count > 0)
         {
@@ -85,7 +90,11 @@ public class PathFinder(
             {
                 if (!obstacles.Contains(tile))
                 {
-                    if (IsReachableDirectly(origin, currentTargetEdgePoint).Item1)
+                    if(distanceFromOrigin > 10 && currentTargetEdgePoint == HitObstacle) {
+                        validEdges.Add(currentTargetEdgePoint);
+                        break;
+                    }
+                    else if (IsReachableDirectly(origin, currentTargetEdgePoint).Item1)
                     {
                         validEdges.Add(currentTargetEdgePoint);
                         break;
@@ -836,6 +845,9 @@ public class PathFinder(
     }
     public (int X, int Y) ProceedNormalSearch()
     {
+        if(Start == (198, 211)) {
+            Console.WriteLine("Start: " + Start + ", HitObstacle: " + HitObstacle);
+        }
         var distanceFromStartToHitObstacle = CalculateDistance(Start, HitObstacle);
         // Will Move long way to hit obstacle
         if(distanceFromStartToHitObstacle > 10) { PreviousOrigin = Start; }
@@ -843,18 +855,24 @@ public class PathFinder(
         var hitObstacleDirection = DetermineHitObstacleContinueToOneDirection();
 
         var allValidEdges = new List<(int X, int Y)>();
-        if (hitObstacleDirection != Direction.none)
-        {
-            var edgeToHitObstacleDirection = GetEdgeToHitObstacleDirection(Start, hitObstacleDirection);
-            if (edgeToHitObstacleDirection != (-1, -1))
-            {
+        (int X, int Y) edgeToHitObstacleDirection = (-1, -1);
+        if (hitObstacleDirection != Direction.none) {
+            edgeToHitObstacleDirection = GetEdgeToHitObstacleDirection(Start, hitObstacleDirection);
+            if (edgeToHitObstacleDirection != (-1, -1) && IsReachableDirectly(Start, edgeToHitObstacleDirection).Item1) {
                 allValidEdges.Add(edgeToHitObstacleDirection);
             }
         }
-        else
-        {
+        else {
             allValidEdges = GetAllValidEdgesFromHitObstacle(Start, HitObstacle, SightRange, Obstacles);
+        }
 
+        if(allValidEdges.Count == 0 && edgeToHitObstacleDirection != (-1, -1)) {
+            var neighbor = GetNeighborTiles(edgeToHitObstacleDirection);
+            foreach(var tile in neighbor) {
+                if(IsReachableDirectly(Start, tile).Item1) {
+                    allValidEdges.Add(tile);
+                }
+            }
         }
 
         // stopwatch.Stop(); ElapsedTime += stopwatch.ElapsedMilliseconds;
@@ -909,6 +927,10 @@ public class PathFinder(
         // Stopwatch stopwatch = new();
         // stopwatch.Start();
 
+        if(origin == (198, 211)) {
+            Console.WriteLine("origin: " + origin + ", target: " + target + ", validEdge: " + validEdge);
+        }
+
         var adjacent = GetAdjacentTiles(validEdge);
         var bestDetourCandidatesList = new List<(int X, int Y)>();
         // if (adjacent.Count > 0) { Console.Write("Adjacent: "); }
@@ -918,6 +940,7 @@ public class PathFinder(
             if (Obstacles.Contains(item)) { continue; }
             if (origin == item) { continue; }
             if (IsOutOfBound(item)) { continue; }
+            if (Closed.Contains(item)) { continue; }
             if (IsReachableDirectly(origin, item).Item1) {
                 bestDetourCandidatesList.Add(item);
             }
@@ -1454,6 +1477,75 @@ class Program
         obstacles.Add((164, 154));
         obstacles.Add((163, 154));
 
+        // (200, 200)
+        obstacles.Add((207, 201));
+        obstacles.Add((207, 200));
+        obstacles.Add((207, 199));
+        obstacles.Add((206, 199));
+        obstacles.Add((206, 198));
+        obstacles.Add((206, 197));
+        obstacles.Add((206, 196));
+        obstacles.Add((206, 195));
+        obstacles.Add((206, 194));
+        obstacles.Add((205, 194));
+        obstacles.Add((205, 193));
+        obstacles.Add((205, 192));
+        obstacles.Add((204, 192));
+        obstacles.Add((204, 191));
+        obstacles.Add((203, 191));
+        obstacles.Add((203, 190));
+        obstacles.Add((202, 190));
+        obstacles.Add((202, 189));
+        obstacles.Add((201, 189));
+        obstacles.Add((200, 189));
+        obstacles.Add((199, 189));
+        obstacles.Add((199, 188));
+        obstacles.Add((198, 188));
+        obstacles.Add((197, 188));
+        obstacles.Add((196, 188));
+        obstacles.Add((195, 188));
+        obstacles.Add((194, 188));
+        obstacles.Add((193, 188));
+        obstacles.Add((192, 188));
+        obstacles.Add((191, 188));
+        obstacles.Add((191, 189));
+        obstacles.Add((190, 189));
+        obstacles.Add((189, 189));
+        obstacles.Add((189, 190));
+        obstacles.Add((189, 191));
+        obstacles.Add((188, 191));
+        obstacles.Add((188, 192));
+        obstacles.Add((188, 193));
+        obstacles.Add((188, 194));
+        obstacles.Add((188, 195));
+        obstacles.Add((188, 196));
+        obstacles.Add((188, 197));
+        obstacles.Add((188, 198));
+        obstacles.Add((188, 199));
+        obstacles.Add((189, 199));
+        obstacles.Add((189, 200));
+        obstacles.Add((189, 201));
+        obstacles.Add((190, 202));
+        obstacles.Add((190, 203));
+        obstacles.Add((190, 204));
+        obstacles.Add((190, 205));
+        obstacles.Add((191, 205));
+        obstacles.Add((191, 206));
+        obstacles.Add((192, 206));
+        obstacles.Add((193, 207));
+        obstacles.Add((194, 207));
+        obstacles.Add((194, 208));
+        obstacles.Add((195, 208));
+        obstacles.Add((196, 208));
+        obstacles.Add((197, 208));
+        obstacles.Add((197, 209));
+        obstacles.Add((198, 209));
+        obstacles.Add((199, 209));
+        obstacles.Add((199, 210));
+        obstacles.Add((200, 210));
+        obstacles.Add((201, 210));
+        obstacles.Add((201, 211));
+        obstacles.Add((202, 211));
 
         var sightRange = 15;
         var moveRange = 15;
@@ -1466,7 +1558,7 @@ class Program
         start = (7, 3); goal = (50, 50); closed = [];
         start = (7, 3); goal = (100, 100); closed = [];
         start = (7, 3); goal = (150, 150); closed = [];
-        // start = (7, 3); goal = (200, 200); closed = [];
+        start = (7, 3); goal = (200, 200); closed = [];
         // start = (7, 3); goal = (250, 250); closed = [];
         // start = (7, 3); goal = (300, 300); closed = [];
         // start = (3, 4); goal = (9, 4); closed = [(7,3)]; hitObstacle = (8,3);
