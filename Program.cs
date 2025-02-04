@@ -72,10 +72,6 @@ public class PathFinder(
         targetEdgeQueue.Enqueue((hitObstacle, 0));
         visited.Add(hitObstacle);
 
-        if(origin == (248, 257)) {
-            Console.WriteLine("origin: " + origin + ", hitObstacle: " + hitObstacle);
-        }
-
         while (targetEdgeQueue.Count > 0)
         {
             // Dequeue the current point and distance
@@ -845,9 +841,6 @@ public class PathFinder(
     }
     public (int X, int Y) ProceedNormalSearch()
     {
-        if(Start == (198, 211)) {
-            Console.WriteLine("Start: " + Start + ", HitObstacle: " + HitObstacle);
-        }
         var distanceFromStartToHitObstacle = CalculateDistance(Start, HitObstacle);
         // Will Move long way to hit obstacle
         if(distanceFromStartToHitObstacle > 10) { PreviousOrigin = Start; }
@@ -926,10 +919,6 @@ public class PathFinder(
 
         // Stopwatch stopwatch = new();
         // stopwatch.Start();
-
-        if(origin == (248, 257)) {
-            Console.WriteLine("origin: " + origin + ", target: " + target + ", validEdge: " + validEdge);
-        }
 
         var adjacent = GetAdjacentTiles(validEdge);
         var bestDetourCandidatesList = new List<(int X, int Y)>();
@@ -1052,10 +1041,6 @@ public class PathFinder(
     {
         // Stopwatch stopwatch = new();
         // stopwatch.Start();
-
-        if(origin == (248, 257)) {
-            Console.WriteLine("Start: " + origin + ", HitObstacle: " + HitObstacle);
-        }
 
         var outerMostEdges = FindOuterMostTiles(origin, validEdges);
         // Console.WriteLine($"leftmost: {outerMostEdges?.Item1}, rightmost: {outerMostEdges?.Item2}");
