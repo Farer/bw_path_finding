@@ -72,7 +72,7 @@ public class PathFinder(
         targetEdgeQueue.Enqueue((hitObstacle, 0));
         visited.Add(hitObstacle);
 
-        if(origin == (198, 211)) {
+        if(origin == (248, 257)) {
             Console.WriteLine("origin: " + origin + ", hitObstacle: " + hitObstacle);
         }
 
@@ -927,7 +927,7 @@ public class PathFinder(
         // Stopwatch stopwatch = new();
         // stopwatch.Start();
 
-        if(origin == (198, 211)) {
+        if(origin == (248, 257)) {
             Console.WriteLine("origin: " + origin + ", target: " + target + ", validEdge: " + validEdge);
         }
 
@@ -1053,6 +1053,10 @@ public class PathFinder(
         // Stopwatch stopwatch = new();
         // stopwatch.Start();
 
+        if(origin == (248, 257)) {
+            Console.WriteLine("Start: " + origin + ", HitObstacle: " + HitObstacle);
+        }
+
         var outerMostEdges = FindOuterMostTiles(origin, validEdges);
         // Console.WriteLine($"leftmost: {outerMostEdges?.Item1}, rightmost: {outerMostEdges?.Item2}");
 
@@ -1077,8 +1081,14 @@ public class PathFinder(
         }
         else if (!isLeftNearTheBorder && !isRightNearTheBorder)
         {
-            if (direction == "")
-            {
+            if (direction == "") {
+                var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, left);
+                var distanceFromPreviousOriginToRight = CalculateDistance(PreviousOrigin, right);
+                if(distanceFromPreviousOriginToLeft > distanceFromPreviousOriginToRight) { direction = "left"; }
+                else if(distanceFromPreviousOriginToLeft < distanceFromPreviousOriginToRight) { direction = "right"; }
+            }
+
+            if (direction == "") {
                 var leftValidNeighborCount = GetValidAdjacentCount(left);
                 var rightValidNeighborCount = GetValidAdjacentCount(right);
                 // Console.WriteLine("leftDetourpointValidNeighborCount: " + leftValidNeighborCount);
@@ -1087,8 +1097,7 @@ public class PathFinder(
                 else if (rightValidNeighborCount > leftValidNeighborCount) { direction = "right"; }
             }
 
-            if (direction == "")
-            {
+            if (direction == "") {
                 var distanToLeft = CalculateDistance(origin, left);
                 var distanToRight = CalculateDistance(origin, right);
                 if (distanToLeft < distanToRight) { direction = "left"; }
@@ -1547,6 +1556,61 @@ class Program
         obstacles.Add((201, 211));
         obstacles.Add((202, 211));
 
+        // (250, 250)
+        obstacles.Add((259, 254));
+        obstacles.Add((259, 253));
+        obstacles.Add((259, 252));
+        obstacles.Add((259, 251));
+        obstacles.Add((259, 250));
+        obstacles.Add((259, 249));
+        obstacles.Add((259, 248));
+        obstacles.Add((259, 247));
+        obstacles.Add((259, 246));
+        obstacles.Add((258, 246));
+        obstacles.Add((258, 245));
+        obstacles.Add((257, 245));
+        obstacles.Add((257, 244));
+        obstacles.Add((256, 244));
+        obstacles.Add((256, 243));
+        obstacles.Add((255, 243));
+        obstacles.Add((255, 242));
+        obstacles.Add((254, 242));
+        obstacles.Add((253, 242));
+        obstacles.Add((252, 242));
+        obstacles.Add((251, 242));
+        obstacles.Add((250, 242));
+        obstacles.Add((249, 242));
+        obstacles.Add((249, 243));
+        obstacles.Add((248, 243));
+        obstacles.Add((247, 243));
+        obstacles.Add((246, 243));
+        obstacles.Add((246, 244));
+        obstacles.Add((245, 244));
+        obstacles.Add((245, 245));
+        obstacles.Add((244, 245));
+        obstacles.Add((244, 246));
+        obstacles.Add((243, 246));
+        obstacles.Add((243, 247));
+        obstacles.Add((243, 248));
+        obstacles.Add((243, 249));
+        obstacles.Add((243, 250));
+        obstacles.Add((243, 251));
+        obstacles.Add((244, 251));
+        obstacles.Add((244, 252));
+        obstacles.Add((244, 253));
+        obstacles.Add((245, 253));
+        obstacles.Add((245, 254));
+        obstacles.Add((246, 254));
+        obstacles.Add((246, 255));
+        obstacles.Add((247, 255));
+        obstacles.Add((247, 256));
+        obstacles.Add((248, 256));
+        obstacles.Add((249, 256));
+        obstacles.Add((249, 257));
+        obstacles.Add((250, 257));
+        obstacles.Add((250, 258));
+        obstacles.Add((251, 258));
+
         var sightRange = 15;
         var moveRange = 15;
         (int X, int Y) tileRangeStart = (0, 0);
@@ -1559,8 +1623,9 @@ class Program
         start = (7, 3); goal = (100, 100); closed = [];
         start = (7, 3); goal = (150, 150); closed = [];
         start = (7, 3); goal = (200, 200); closed = [];
-        // start = (7, 3); goal = (250, 250); closed = [];
+        start = (7, 3); goal = (250, 250); closed = [];
         // start = (7, 3); goal = (300, 300); closed = [];
+
         // start = (3, 4); goal = (9, 4); closed = [(7,3)]; hitObstacle = (8,3);
         // start = (2, 4); goal = (9, 4); closed = [(2,4),(3,4),(7,3),]; hitObstacle = (7,4);
         // start = (0, 10); goal = (9, 4); closed = [(2,4),(3,4),(7,3),]; hitObstacle = (7,4);
