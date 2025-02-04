@@ -1594,10 +1594,26 @@ class Program
         obstacles.Add((250, 258));
         obstacles.Add((251, 258));
 
+        // (300, 300)
+        obstacles.Add((300, 295));
+        obstacles.Add((299, 295));
+        obstacles.Add((298, 295));
+        obstacles.Add((297, 295));
+        obstacles.Add((296, 295));
+        obstacles.Add((295, 295));
+        obstacles.Add((294, 295));
+        obstacles.Add((294, 296));
+        obstacles.Add((293, 296));
+        obstacles.Add((293, 297));
+        obstacles.Add((292, 297));
+        obstacles.Add((292, 298));
+        obstacles.Add((291, 298));
+        obstacles.Add((291, 299));
+
         var sightRange = 15;
         var moveRange = 15;
         (int X, int Y) tileRangeStart = (0, 0);
-        (int X, int Y) tileRangeEnd = (1920, 1080);
+        (int X, int Y) tileRangeEnd = (300, 300);
         var closed = new HashSet<(int X, int Y)>();
         var hitObstacle = (-1, -1);
         var start = (-1, -1); var goal = (-1, -1);
@@ -1607,7 +1623,7 @@ class Program
         start = (7, 3); goal = (150, 150); closed = [];
         start = (7, 3); goal = (200, 200); closed = [];
         start = (7, 3); goal = (250, 250); closed = [];
-        // start = (7, 3); goal = (300, 300); closed = [];
+        start = (7, 3); goal = (300, 300); closed = [];
 
         // start = (3, 4); goal = (9, 4); closed = [(7,3)]; hitObstacle = (8,3);
         // start = (2, 4); goal = (9, 4); closed = [(2,4),(3,4),(7,3),]; hitObstacle = (7,4);
