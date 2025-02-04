@@ -490,9 +490,6 @@ public class PathFinder(
         bool isReachable = false
     )
     {
-        if(origin == (93, 109)) {
-            Console.WriteLine("FindExtremeAngleTargets - origin: " + origin + ", targets: " + targets + ", isReachable: " + isReachable);
-        }
         var finalCandidates = new List<(int X, int Y)>();
         foreach (var item in targets)
         {
@@ -872,15 +869,38 @@ public class PathFinder(
         // Console.WriteLine();
 
         (int X, int Y) bestDetourPoint;
-        if (allValidEdges.Count == 1)
-        {
+        if (allValidEdges.Count == 1) {
             bestDetourPoint = GetBestDetourPointWithSingleValidEdge(Start, Goal, allValidEdges[0]);
         }
-        else
-        {
-            bestDetourPoint = GetFinalDetourPointWithMiultipleValidEdges(Start, allValidEdges);
+        else {
+            bool isValidEdges = true;
+            while(true) {
+                var outerMostEdges = FindOuterMostTiles(Start, allValidEdges);
+                if(outerMostEdges is null) {
+                    Console.WriteLine("No outermost edges");
+                    isValidEdges = false;
+                    break;
+                }
+                bool leftIsValid = HasRechableAdjacentTileFromOrigin(Start, outerMostEdges.Value.Item1);
+                bool rightIsValid = HasRechableAdjacentTileFromOrigin(Start, outerMostEdges.Value.Item2);
+                if(!leftIsValid) { allValidEdges.Remove(outerMostEdges.Value.Item1); }
+                if(!rightIsValid) { allValidEdges.Remove(outerMostEdges.Value.Item2); }
+                if(!leftIsValid || !rightIsValid) { continue; }
+                else { break; }
+            }
+            if(isValidEdges) { bestDetourPoint = GetFinalDetourPointWithMiultipleValidEdges(Start, allValidEdges); }
+            else { bestDetourPoint = (-1, -1); }
         }
         return bestDetourPoint;
+    }
+    private bool HasRechableAdjacentTileFromOrigin((int X, int Y) origin, (int X, int Y) target) {
+        var adjacentTiles = GetAdjacentTiles(target);
+        foreach(var tile in adjacentTiles) {
+            if(!Obstacles.Contains(tile) && IsReachableDirectly(origin, tile).Item1) {
+                return true;
+            }
+        }
+        return false;
     }
     private (int X, int Y) GetBestDetourPointWithSingleValidEdge((int X, int Y) origin, (int X, int Y) target, (int X, int Y) validEdge)
     {
@@ -1072,10 +1092,6 @@ public class PathFinder(
         var detourCandidates = GetAdjacentTiles(finalTargetEdge);
         var filteredDetourCandidates = new List<(int, int)>();
         // if (detourCandidates.Count > 0) { Console.Write("Detour Candidate: "); }
-
-        if(origin == (93, 109)) {
-            Console.WriteLine("FindExtremeAngleTargets - origin: " + origin);
-        }
 
         foreach (var item in detourCandidates)
         {
