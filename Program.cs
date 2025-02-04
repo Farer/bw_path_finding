@@ -412,51 +412,77 @@ public class PathFinder(
         if (Math.Abs(tile.X - target.X) == 1 && Math.Abs(tile.Y - target.Y) == 0) { return true; }
         else { return false; }
     }
-    public static ((int X, int Y), (int X, int Y))? FindOuterMostTiles((int X, int Y) originTile, List<(int X, int Y)> validEdgeTiles)
+    public bool IfHasValidDetourPoint((int X, int Y) origin, (int X, int Y) target) {
+        var adjacentTiles = GetAdjacentTiles(target);
+        foreach(var tile in adjacentTiles) {
+            if(IsReachableDirectly(origin, tile).Item1) {
+                return true;
+            }
+        }
+        return false;
+    }
+    public static ((int X, int Y), (int X, int Y))? FindOuterMostTiles((int X, int Y) originTile, List<(int X, int Y)> validEdgeTiles) 
     {
-        // Not enough valid edges to find outermost
-        if (validEdgeTiles == null) { return null; }
-        if( validEdgeTiles.Count == 1) { return (validEdgeTiles[0], validEdgeTiles[0]); }
-
-        // Calculate the angle from the origin point to each valid edge.
-        var angles = validEdgeTiles.Select(edge => new
-        {
+        // Validate input: if no valid tile is provided, return null.
+        // If there's only one tile, return that tile for both leftmost and rightmost.
+        if (validEdgeTiles == null || validEdgeTiles.Count == 0) { return null; }
+        if (validEdgeTiles.Count == 1) { return (validEdgeTiles[0], validEdgeTiles[0]); }
+        
+        // Calculate the angle from the origin to each valid edge tile
+        // and store the results in a list.
+        var angles = validEdgeTiles.Select(edge => new {
             Edge = edge,
             Angle = Math.Atan2(edge.Y - originTile.Y, edge.X - originTile.X)
         }).ToList();
-
-        // Sort the angles in ascending order.
+        
+        // Sort the list by angle in ascending order.
         angles.Sort((a, b) => a.Angle.CompareTo(b.Angle));
+        
+        const double epsilon = 1e-10; // Tolerance for floating-point comparison
 
-        var finalLeftMost = new Dictionary<(int x, int y), double>();
-        var finalRightMost = new Dictionary<(int x, int y), double>();
-
-        // The first element in the sorted list will have the smallest angle (leftmost),
-        // and the last element will have the largest angle (rightmost).
-        var leftmost = angles.First().Edge;
-        finalLeftMost.Add(leftmost, CalculateDistance(originTile, leftmost));
-        var leftmostAngle = angles.First().Angle;
-        foreach (var item in angles)
+        // Select the leftmost candidate (smallest angle).
+        // Iterate from the beginning until the angle deviates more than epsilon.
+        double leftmostAngle = angles[0].Angle;
+        var leftCandidate = angles[0].Edge;
+        double leftMaxDistance = CalculateDistance(originTile, leftCandidate);
+        
+        for (int i = 1; i < angles.Count; i++)
         {
-            if (item.Angle == leftmostAngle) { finalLeftMost.TryAdd(item.Edge, CalculateDistance(originTile, item.Edge)); }
+            if (Math.Abs(angles[i].Angle - leftmostAngle) <= epsilon)
+            {
+                double distance = CalculateDistance(originTile, angles[i].Edge);
+                if (distance > leftMaxDistance)
+                {
+                    leftMaxDistance = distance;
+                    leftCandidate = angles[i].Edge;
+                }
+            }
+            else
+            {
+                break; // Exit the loop when encountering a significantly different angle.
+            }
         }
-
-        var rightmost = angles.Last().Edge;
-        finalRightMost.Add(rightmost, CalculateDistance(originTile, rightmost));
-        var rightmostAngle = angles.Last().Angle;
-        foreach (var item in angles)
-        {
-            if (item.Angle == rightmostAngle) { finalRightMost.TryAdd(item.Edge, CalculateDistance(originTile, item.Edge)); }
+        
+        // Select the rightmost candidate (largest angle).
+        // Iterate from the end until the angle deviates more than epsilon.
+        double rightmostAngle = angles[^1].Angle;
+        var rightCandidate = angles[^1].Edge;
+        double rightMaxDistance = CalculateDistance(originTile, rightCandidate);
+        
+        for (int i = angles.Count - 2; i >= 0; i--) {
+            if (Math.Abs(angles[i].Angle - rightmostAngle) <= epsilon) {
+                double distance = CalculateDistance(originTile, angles[i].Edge);
+                if (distance > rightMaxDistance) {
+                    rightMaxDistance = distance;
+                    rightCandidate = angles[i].Edge;
+                }
+            }
+            else {
+                break; // Exit the loop when the angle deviates beyond the tolerance.
+            }
         }
-
-        var leftMaxDistanceItem = finalLeftMost.Aggregate((max, current) => current.Value > max.Value ? current : max).Key;
-        var rightMaxDistanceItem = finalRightMost.Aggregate((max, current) => current.Value > max.Value ? current : max).Key;
-
-        // Console.WriteLine($"Leftmost Edge: {leftMaxDistanceItem}");
-        // Console.WriteLine($"Rightmost Edge: {rightMaxDistanceItem}");
-        // Console.WriteLine();
-
-        return (leftMaxDistanceItem, rightMaxDistanceItem);
+        
+        return (leftCandidate, rightCandidate);
     }
     public ((int x, int y) leftMostTarget, (int x, int y) rightMostTarget) FindExtremeAngleTargets(
         (int X, int Y) origin,
@@ -464,6 +490,9 @@ public class PathFinder(
         bool isReachable = false
     )
     {
+        if(origin == (93, 109)) {
+            Console.WriteLine("FindExtremeAngleTargets - origin: " + origin + ", targets: " + targets + ", isReachable: " + isReachable);
+        }
         var finalCandidates = new List<(int X, int Y)>();
         foreach (var item in targets)
         {
@@ -987,7 +1016,7 @@ public class PathFinder(
         var left = outerMostEdges!.Value.Item1;
         var right = outerMostEdges!.Value.Item2;
         if(left == right) { return left; }
-        
+
         bool isLeftNearTheBorder = HasNeighborOutOfBound(left);
         bool isRightNearTheBorder = HasNeighborOutOfBound(right);
 
@@ -1043,6 +1072,11 @@ public class PathFinder(
         var detourCandidates = GetAdjacentTiles(finalTargetEdge);
         var filteredDetourCandidates = new List<(int, int)>();
         // if (detourCandidates.Count > 0) { Console.Write("Detour Candidate: "); }
+
+        if(origin == (93, 109)) {
+            Console.WriteLine("FindExtremeAngleTargets - origin: " + origin);
+        }
+
         foreach (var item in detourCandidates)
         {
             if (origin == item)
@@ -1052,7 +1086,7 @@ public class PathFinder(
                 // Console.WriteLine();
                 continue;
             }
-            if (!IsReachableDirectly(origin, item).Item1 || Closed.Contains(item)) { continue; }
+            if (Closed.Contains(item) || Obstacles.Contains(item) || !IsReachableDirectly(origin, item).Item1 ) { continue; }
             filteredDetourCandidates.Add(item);
             // Console.Write(" " + item);
         }
@@ -1319,6 +1353,92 @@ class Program
         obstacles.Add((98,110));
         obstacles.Add((99,110));
 
+        // (150, 150)
+        obstacles.Add((146, 162));
+        obstacles.Add((146, 161));
+        obstacles.Add((145, 161));
+        obstacles.Add((145, 160));
+        obstacles.Add((145, 159));
+        obstacles.Add((145, 158));
+        obstacles.Add((144, 158));
+        obstacles.Add((144, 157));
+        obstacles.Add((144, 156));
+        obstacles.Add((143, 156));
+        obstacles.Add((143, 155));
+        obstacles.Add((143, 154));
+        obstacles.Add((142, 154));
+        obstacles.Add((142, 153));
+        obstacles.Add((142, 152));
+        obstacles.Add((141, 152));
+        obstacles.Add((141, 151));
+        obstacles.Add((141, 150));
+        obstacles.Add((141, 149));
+        obstacles.Add((140, 149));
+        obstacles.Add((140, 148));
+        obstacles.Add((140, 147));
+        obstacles.Add((140, 146));
+        obstacles.Add((140, 145));
+        obstacles.Add((140, 144));
+        obstacles.Add((141, 144));
+        obstacles.Add((141, 143));
+        obstacles.Add((142, 143));
+        obstacles.Add((142, 142));
+        obstacles.Add((142, 141));
+        obstacles.Add((143, 141));
+        obstacles.Add((143, 140));
+        obstacles.Add((144, 140));
+        obstacles.Add((145, 140));
+        obstacles.Add((145, 139));
+        obstacles.Add((146, 139));
+        obstacles.Add((147, 139));
+        obstacles.Add((147, 138));
+        obstacles.Add((148, 138));
+        obstacles.Add((149, 138));
+        obstacles.Add((150, 138));
+        obstacles.Add((151, 138));
+        obstacles.Add((152, 137));
+        obstacles.Add((153, 137));
+        obstacles.Add((154, 137));
+        obstacles.Add((155, 137));
+        obstacles.Add((156, 137));
+        obstacles.Add((157, 137));
+        obstacles.Add((158, 137));
+        obstacles.Add((159, 137));
+        obstacles.Add((160, 137));
+        obstacles.Add((160, 138));
+        obstacles.Add((161, 138));
+        obstacles.Add((162, 138));
+        obstacles.Add((163, 138));
+        obstacles.Add((163, 139));
+        obstacles.Add((164, 139));
+        obstacles.Add((165, 139));
+        obstacles.Add((165, 140));
+        obstacles.Add((166, 140));
+        obstacles.Add((167, 140));
+        obstacles.Add((167, 141));
+        obstacles.Add((168, 141));
+        obstacles.Add((168, 142));
+        obstacles.Add((168, 143));
+        obstacles.Add((168, 144));
+        obstacles.Add((168, 145));
+        obstacles.Add((168, 146));
+        obstacles.Add((169, 146));
+        obstacles.Add((169, 147));
+        obstacles.Add((169, 148));
+        obstacles.Add((169, 149));
+        obstacles.Add((169, 150));
+        obstacles.Add((168, 150));
+        obstacles.Add((168, 151));
+        obstacles.Add((167, 151));
+        obstacles.Add((167, 152));
+        obstacles.Add((166, 152));
+        obstacles.Add((166, 153));
+        obstacles.Add((165, 153));
+        obstacles.Add((164, 153));
+        obstacles.Add((164, 154));
+        obstacles.Add((163, 154));
+
+
         var sightRange = 15;
         var moveRange = 15;
         (int X, int Y) tileRangeStart = (0, 0);
@@ -1329,7 +1449,7 @@ class Program
         start = (7, 3); goal = (9, 4); closed = [];
         start = (7, 3); goal = (50, 50); closed = [];
         start = (7, 3); goal = (100, 100); closed = [];
-        // start = (7, 3); goal = (150, 150); closed = [];
+        start = (7, 3); goal = (150, 150); closed = [];
         // start = (7, 3); goal = (200, 200); closed = [];
         // start = (7, 3); goal = (250, 250); closed = [];
         // start = (7, 3); goal = (300, 300); closed = [];
