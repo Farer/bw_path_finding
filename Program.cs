@@ -86,7 +86,8 @@ public class PathFinder(
             {
                 if (!obstacles.Contains(tile))
                 {
-                    if(distanceFromOrigin > 10 && currentTargetEdgePoint == HitObstacle) {
+                    if (distanceFromOrigin > 10 && currentTargetEdgePoint == HitObstacle)
+                    {
                         validEdges.Add(currentTargetEdgePoint);
                         break;
                     }
@@ -109,7 +110,6 @@ public class PathFinder(
                 }
             }
         }
-
         return validEdges;
     }
     public bool HasNeighborOutOfBound((int X, int Y) targetTile)
@@ -417,32 +417,36 @@ public class PathFinder(
         if (Math.Abs(tile.X - target.X) == 1 && Math.Abs(tile.Y - target.Y) == 0) { return true; }
         else { return false; }
     }
-    public bool IfHasValidDetourPoint((int X, int Y) origin, (int X, int Y) target) {
+    public bool IfHasValidDetourPoint((int X, int Y) origin, (int X, int Y) target)
+    {
         var adjacentTiles = GetAdjacentTiles(target);
-        foreach(var tile in adjacentTiles) {
-            if(IsReachableDirectly(origin, tile).Item1) {
+        foreach (var tile in adjacentTiles)
+        {
+            if (IsReachableDirectly(origin, tile).Item1)
+            {
                 return true;
             }
         }
         return false;
     }
-    public static ((int X, int Y), (int X, int Y))? FindOuterMostTiles((int X, int Y) originTile, List<(int X, int Y)> validEdgeTiles) 
+    public static ((int X, int Y), (int X, int Y))? FindOuterMostTiles((int X, int Y) originTile, List<(int X, int Y)> validEdgeTiles)
     {
         // Validate input: if no valid tile is provided, return null.
         // If there's only one tile, return that tile for both leftmost and rightmost.
         if (validEdgeTiles == null || validEdgeTiles.Count == 0) { return null; }
         if (validEdgeTiles.Count == 1) { return (validEdgeTiles[0], validEdgeTiles[0]); }
-        
+
         // Calculate the angle from the origin to each valid edge tile
         // and store the results in a list.
-        var angles = validEdgeTiles.Select(edge => new {
+        var angles = validEdgeTiles.Select(edge => new
+        {
             Edge = edge,
             Angle = Math.Atan2(edge.Y - originTile.Y, edge.X - originTile.X)
         }).ToList();
-        
+
         // Sort the list by angle in ascending order.
         angles.Sort((a, b) => a.Angle.CompareTo(b.Angle));
-        
+
         const double epsilon = 1e-10; // Tolerance for floating-point comparison
 
         // Select the leftmost candidate (smallest angle).
@@ -450,7 +454,7 @@ public class PathFinder(
         double leftmostAngle = angles[0].Angle;
         var leftCandidate = angles[0].Edge;
         double leftMaxDistance = CalculateDistance(originTile, leftCandidate);
-        
+
         for (int i = 1; i < angles.Count; i++)
         {
             if (Math.Abs(angles[i].Angle - leftmostAngle) <= epsilon)
@@ -467,26 +471,30 @@ public class PathFinder(
                 break; // Exit the loop when encountering a significantly different angle.
             }
         }
-        
+
         // Select the rightmost candidate (largest angle).
         // Iterate from the end until the angle deviates more than epsilon.
         double rightmostAngle = angles[^1].Angle;
         var rightCandidate = angles[^1].Edge;
         double rightMaxDistance = CalculateDistance(originTile, rightCandidate);
-        
-        for (int i = angles.Count - 2; i >= 0; i--) {
-            if (Math.Abs(angles[i].Angle - rightmostAngle) <= epsilon) {
+
+        for (int i = angles.Count - 2; i >= 0; i--)
+        {
+            if (Math.Abs(angles[i].Angle - rightmostAngle) <= epsilon)
+            {
                 double distance = CalculateDistance(originTile, angles[i].Edge);
-                if (distance > rightMaxDistance) {
+                if (distance > rightMaxDistance)
+                {
                     rightMaxDistance = distance;
                     rightCandidate = angles[i].Edge;
                 }
             }
-            else {
+            else
+            {
                 break; // Exit the loop when the angle deviates beyond the tolerance.
             }
         }
-        
+
         return (leftCandidate, rightCandidate);
     }
     public ((int x, int y) leftMostTarget, (int x, int y) rightMostTarget) FindExtremeAngleTargets(
@@ -498,8 +506,9 @@ public class PathFinder(
         var finalCandidates = new List<(int X, int Y)>();
         foreach (var item in targets)
         {
-            if(Obstacles.Contains(item)) { continue; }
-            if (isReachable) {
+            if (Obstacles.Contains(item)) { continue; }
+            if (isReachable)
+            {
                 if (origin != item && IsReachableDirectly(origin, item).Item1) { finalCandidates.Add(item); }
             }
             else { finalCandidates.Add(item); }
@@ -533,37 +542,6 @@ public class PathFinder(
         else if (diffX == 0 && diffY == 1) { return Direction.down; }
         else if (diffX == 0 && diffY == -1) { return Direction.up; }
         return Direction.none;
-    }
-    public static (int X, int Y) FindClosestDetourToTarget((int X, int Y) origin, (int X, int Y) target, List<(int X, int Y)> detours)
-    {
-        // calculate the angle of the goal
-        double targetAngle = Math.Atan2(target.Y - origin.Y, target.X - origin.X);
-
-        (int X, int Y) closestDetour = (-1, -1);
-        double smallestAngleDifference = double.MaxValue;
-
-        foreach (var detour in detours)
-        {
-            // calculate the angle of the detour
-            double detourAngle = Math.Atan2(detour.Y - origin.Y, detour.X - origin.X);
-
-            // calculate the difference between the goal angle and the detour angle (absolute value)
-            double angleDifference = Math.Abs(targetAngle - detourAngle);
-
-            // adjust the angle difference so that it does not exceed 180 degrees
-            if (angleDifference > Math.PI)
-            {
-                angleDifference = 2 * Math.PI - angleDifference;
-            }
-
-            // pick the detour with the smallest angle difference
-            if (angleDifference < smallestAngleDifference)
-            {
-                smallestAngleDifference = angleDifference;
-                closestDetour = detour;
-            }
-        }
-        return closestDetour;
     }
     public void DisplayMap(List<(int X, int Y)>? path, List<(int X, int Y)>? detourPoint, (int X, int Y)? hitObstacle)
     {
@@ -843,26 +821,32 @@ public class PathFinder(
     {
         var distanceFromStartToHitObstacle = CalculateDistance(Start, HitObstacle);
         // Will Move long way to hit obstacle
-        if(distanceFromStartToHitObstacle > 10) { PreviousOrigin = Start; }
+        if (distanceFromStartToHitObstacle > 10) { PreviousOrigin = Start; }
         // Stopwatch stopwatch = new();
         var hitObstacleDirection = DetermineHitObstacleContinueToOneDirection();
 
         var allValidEdges = new List<(int X, int Y)>();
         (int X, int Y) edgeToHitObstacleDirection = (-1, -1);
-        if (hitObstacleDirection != Direction.none) {
+        if (hitObstacleDirection != Direction.none)
+        {
             edgeToHitObstacleDirection = GetEdgeToHitObstacleDirection(Start, hitObstacleDirection);
-            if (edgeToHitObstacleDirection != (-1, -1) && IsReachableDirectly(Start, edgeToHitObstacleDirection).Item1) {
+            if (edgeToHitObstacleDirection != (-1, -1) && IsReachableDirectly(Start, edgeToHitObstacleDirection).Item1)
+            {
                 allValidEdges.Add(edgeToHitObstacleDirection);
             }
         }
-        else {
+        else
+        {
             allValidEdges = GetAllValidEdgesFromHitObstacle(Start, HitObstacle, SightRange, Obstacles);
         }
 
-        if(allValidEdges.Count == 0 && edgeToHitObstacleDirection != (-1, -1)) {
+        if (allValidEdges.Count == 0 && edgeToHitObstacleDirection != (-1, -1))
+        {
             var neighbor = GetNeighborTiles(edgeToHitObstacleDirection);
-            foreach(var tile in neighbor) {
-                if(IsReachableDirectly(Start, tile).Item1) {
+            foreach (var tile in neighbor)
+            {
+                if (IsReachableDirectly(Start, tile).Item1)
+                {
                     allValidEdges.Add(tile);
                 }
             }
@@ -880,34 +864,41 @@ public class PathFinder(
         // Console.WriteLine();
 
         (int X, int Y) bestDetourPoint;
-        if (allValidEdges.Count == 1) {
+        if (allValidEdges.Count == 1)
+        {
             bestDetourPoint = GetBestDetourPointWithSingleValidEdge(Start, Goal, allValidEdges[0]);
         }
-        else {
+        else
+        {
             bool isValidEdges = true;
-            while(true) {
+            while (true)
+            {
                 var outerMostEdges = FindOuterMostTiles(Start, allValidEdges);
-                if(outerMostEdges is null) {
+                if (outerMostEdges is null)
+                {
                     Console.WriteLine("No outermost edges");
                     isValidEdges = false;
                     break;
                 }
                 bool leftIsValid = HasRechableAdjacentTileFromOrigin(Start, outerMostEdges.Value.Item1);
                 bool rightIsValid = HasRechableAdjacentTileFromOrigin(Start, outerMostEdges.Value.Item2);
-                if(!leftIsValid) { allValidEdges.Remove(outerMostEdges.Value.Item1); }
-                if(!rightIsValid) { allValidEdges.Remove(outerMostEdges.Value.Item2); }
-                if(!leftIsValid || !rightIsValid) { continue; }
+                if (!leftIsValid) { allValidEdges.Remove(outerMostEdges.Value.Item1); }
+                if (!rightIsValid) { allValidEdges.Remove(outerMostEdges.Value.Item2); }
+                if (!leftIsValid || !rightIsValid) { continue; }
                 else { break; }
             }
-            if(isValidEdges) { bestDetourPoint = GetFinalDetourPointWithMiultipleValidEdges(Start, allValidEdges); }
+            if (isValidEdges) { bestDetourPoint = GetFinalDetourPointWithMiultipleValidEdges(Start, allValidEdges); }
             else { bestDetourPoint = (-1, -1); }
         }
         return bestDetourPoint;
     }
-    private bool HasRechableAdjacentTileFromOrigin((int X, int Y) origin, (int X, int Y) target) {
+    private bool HasRechableAdjacentTileFromOrigin((int X, int Y) origin, (int X, int Y) target)
+    {
         var adjacentTiles = GetAdjacentTiles(target);
-        foreach(var tile in adjacentTiles) {
-            if(!Obstacles.Contains(tile) && IsReachableDirectly(origin, tile).Item1) {
+        foreach (var tile in adjacentTiles)
+        {
+            if (!Obstacles.Contains(tile) && IsReachableDirectly(origin, tile).Item1)
+            {
                 return true;
             }
         }
@@ -930,13 +921,14 @@ public class PathFinder(
             if (origin == item) { continue; }
             if (IsOutOfBound(item)) { continue; }
             if (Closed.Contains(item)) { continue; }
-            if (IsReachableDirectly(origin, item).Item1) {
+            if (IsReachableDirectly(origin, item).Item1)
+            {
                 bestDetourCandidatesList.Add(item);
             }
         }
         // Console.WriteLine();
 
-        if(bestDetourCandidatesList.Count == 1) { return bestDetourCandidatesList[0];}
+        if (bestDetourCandidatesList.Count == 1) { return bestDetourCandidatesList[0]; }
 
         var outerMostTiles = FindOuterMostTiles(origin, bestDetourCandidatesList);
         if (outerMostTiles is null) { return (-1, -1); }
@@ -951,7 +943,8 @@ public class PathFinder(
         if (!leftIsClosed && rightIsClosed) { bestDetourPoint = left; }
         else if (leftIsClosed && !rightIsClosed) { bestDetourPoint = right; }
 
-        if (PreviousOrigin != (-1, -1) && bestDetourPoint == (-1, -1)) {
+        if (PreviousOrigin != (-1, -1) && bestDetourPoint == (-1, -1))
+        {
             var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, left);
             var distanceFromPreviousOriginToRight = CalculateDistance(PreviousOrigin, right);
             if (distanceFromPreviousOriginToLeft < distanceFromPreviousOriginToRight) { bestDetourPoint = right; }
@@ -1047,7 +1040,7 @@ public class PathFinder(
 
         var left = outerMostEdges!.Value.Item1;
         var right = outerMostEdges!.Value.Item2;
-        if(left == right) { return left; }
+        if (left == right) { return left; }
 
         bool isLeftNearTheBorder = HasNeighborOutOfBound(left);
         bool isRightNearTheBorder = HasNeighborOutOfBound(right);
@@ -1066,14 +1059,16 @@ public class PathFinder(
         }
         else if (!isLeftNearTheBorder && !isRightNearTheBorder)
         {
-            if (direction == "") {
+            if (direction == "")
+            {
                 var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, left);
                 var distanceFromPreviousOriginToRight = CalculateDistance(PreviousOrigin, right);
-                if(distanceFromPreviousOriginToLeft > distanceFromPreviousOriginToRight) { direction = "left"; }
-                else if(distanceFromPreviousOriginToLeft < distanceFromPreviousOriginToRight) { direction = "right"; }
+                if (distanceFromPreviousOriginToLeft > distanceFromPreviousOriginToRight) { direction = "left"; }
+                else if (distanceFromPreviousOriginToLeft < distanceFromPreviousOriginToRight) { direction = "right"; }
             }
 
-            if (direction == "") {
+            if (direction == "")
+            {
                 var leftValidNeighborCount = GetValidAdjacentCount(left);
                 var rightValidNeighborCount = GetValidAdjacentCount(right);
                 // Console.WriteLine("leftDetourpointValidNeighborCount: " + leftValidNeighborCount);
@@ -1082,7 +1077,8 @@ public class PathFinder(
                 else if (rightValidNeighborCount > leftValidNeighborCount) { direction = "right"; }
             }
 
-            if (direction == "") {
+            if (direction == "")
+            {
                 var distanToLeft = CalculateDistance(origin, left);
                 var distanToRight = CalculateDistance(origin, right);
                 if (distanToLeft < distanToRight) { direction = "left"; }
@@ -1119,7 +1115,7 @@ public class PathFinder(
                 // Console.WriteLine();
                 continue;
             }
-            if (Closed.Contains(item) || Obstacles.Contains(item) || !IsReachableDirectly(origin, item).Item1 ) { continue; }
+            if (Closed.Contains(item) || Obstacles.Contains(item) || !IsReachableDirectly(origin, item).Item1) { continue; }
             filteredDetourCandidates.Add(item);
             // Console.Write(" " + item);
         }
@@ -1128,14 +1124,16 @@ public class PathFinder(
         // Console.WriteLine("direction: " + direction);
         var bestDetourPoint = (-1, -1);
 
-        if(PreviousOrigin != (-1, -1) && bestDetourPoint == (-1, -1)) {
+        if (PreviousOrigin != (-1, -1) && bestDetourPoint == (-1, -1))
+        {
             var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, leftMostTarget);
             var distanceFromPreviousOriginToRight = CalculateDistance(PreviousOrigin, rightMostTarget);
             if (distanceFromPreviousOriginToLeft < distanceFromPreviousOriginToRight) { bestDetourPoint = rightMostTarget; }
             else if (distanceFromPreviousOriginToLeft > distanceFromPreviousOriginToRight) { bestDetourPoint = leftMostTarget; }
         }
 
-        if(bestDetourPoint == (-1, -1)) {
+        if (bestDetourPoint == (-1, -1))
+        {
             if (direction == "left") { bestDetourPoint = leftMostTarget; }
             else if (direction == "right") { bestDetourPoint = rightMostTarget; }
         }
@@ -1239,7 +1237,7 @@ public class PathFinder(
                 // if (waypoints.Count > 0) { Console.Write("waypoint: "); }
                 // foreach (var item in waypoints)
                 // {
-                    // Console.Write(" " + item);
+                // Console.Write(" " + item);
                 // }
                 // Console.WriteLine();
 
@@ -1282,109 +1280,109 @@ class Program
         };
 
         // (50, 50)
-        obstacles.Add((57,47));
-        obstacles.Add((57,46));
-        obstacles.Add((56,46));
-        obstacles.Add((55,46));
-        obstacles.Add((55,46));
-        obstacles.Add((55,45));
-        obstacles.Add((54,45));
-        obstacles.Add((53,45));
-        obstacles.Add((52,45));
-        obstacles.Add((51,45));
-        obstacles.Add((50,45));
-        obstacles.Add((49,45));
-        obstacles.Add((48,45));
-        obstacles.Add((47,45));
-        obstacles.Add((46,45));
-        obstacles.Add((45,45));
-        obstacles.Add((44,45));
-        obstacles.Add((44,46));
-        obstacles.Add((43,46));
-        obstacles.Add((43,47));
-        obstacles.Add((43,48));
-        obstacles.Add((42,48));
-        obstacles.Add((42,49));
-        obstacles.Add((41,49));
-        obstacles.Add((41,50));
-        obstacles.Add((41,51));
-        obstacles.Add((41,52));
-        obstacles.Add((41,53));
-        obstacles.Add((41,54));
-        obstacles.Add((42,54));
-        obstacles.Add((42,55));
-        obstacles.Add((42,56));
-        obstacles.Add((43,56));
-        obstacles.Add((43,57));
-        obstacles.Add((44,57));
-        obstacles.Add((44,58));
-        obstacles.Add((45,58));
-        obstacles.Add((45,59));
-        obstacles.Add((46,59));
-        obstacles.Add((47,59));
+        obstacles.Add((57, 47));
+        obstacles.Add((57, 46));
+        obstacles.Add((56, 46));
+        obstacles.Add((55, 46));
+        obstacles.Add((55, 46));
+        obstacles.Add((55, 45));
+        obstacles.Add((54, 45));
+        obstacles.Add((53, 45));
+        obstacles.Add((52, 45));
+        obstacles.Add((51, 45));
+        obstacles.Add((50, 45));
+        obstacles.Add((49, 45));
+        obstacles.Add((48, 45));
+        obstacles.Add((47, 45));
+        obstacles.Add((46, 45));
+        obstacles.Add((45, 45));
+        obstacles.Add((44, 45));
+        obstacles.Add((44, 46));
+        obstacles.Add((43, 46));
+        obstacles.Add((43, 47));
+        obstacles.Add((43, 48));
+        obstacles.Add((42, 48));
+        obstacles.Add((42, 49));
+        obstacles.Add((41, 49));
+        obstacles.Add((41, 50));
+        obstacles.Add((41, 51));
+        obstacles.Add((41, 52));
+        obstacles.Add((41, 53));
+        obstacles.Add((41, 54));
+        obstacles.Add((42, 54));
+        obstacles.Add((42, 55));
+        obstacles.Add((42, 56));
+        obstacles.Add((43, 56));
+        obstacles.Add((43, 57));
+        obstacles.Add((44, 57));
+        obstacles.Add((44, 58));
+        obstacles.Add((45, 58));
+        obstacles.Add((45, 59));
+        obstacles.Add((46, 59));
+        obstacles.Add((47, 59));
 
         // (100, 100)
-        obstacles.Add((111,101));
-        obstacles.Add((112,101));
-        obstacles.Add((112,100));
-        obstacles.Add((113,100));
-        obstacles.Add((113,99));
-        obstacles.Add((113,98));
-        obstacles.Add((113,97));
-        obstacles.Add((113,96));
-        obstacles.Add((113,95));
-        obstacles.Add((112,95));
-        obstacles.Add((112,94));
-        obstacles.Add((111,95));
-        obstacles.Add((111,94));
-        obstacles.Add((110,94));
-        obstacles.Add((110,93));
-        obstacles.Add((110,93));
-        obstacles.Add((109,93));
-        obstacles.Add((108,93));
-        obstacles.Add((107,93));
-        obstacles.Add((107,92));
-        obstacles.Add((106,92));
-        obstacles.Add((105,92));
-        obstacles.Add((104,92));
-        obstacles.Add((103,92));
-        obstacles.Add((103,93));
-        obstacles.Add((102,93));
-        obstacles.Add((101,93));
-        obstacles.Add((100,93));
-        obstacles.Add((99,93));
-        obstacles.Add((99,94));
-        obstacles.Add((98,94));
-        obstacles.Add((97,94));
-        obstacles.Add((97,95));
-        obstacles.Add((96,95));
-        obstacles.Add((95,95));
-        obstacles.Add((95,96));
-        obstacles.Add((94,96));
-        obstacles.Add((94,97));
-        obstacles.Add((94,98));
-        obstacles.Add((93,98));
-        obstacles.Add((93,99));
-        obstacles.Add((93,100));
-        obstacles.Add((93,101));
-        obstacles.Add((92,101));
-        obstacles.Add((92,102));
-        obstacles.Add((92,103));
-        obstacles.Add((92,104));
-        obstacles.Add((93,104));
-        obstacles.Add((93,105));
-        obstacles.Add((93,106));
-        obstacles.Add((94,105));
-        obstacles.Add((94,106));
-        obstacles.Add((94,107));
-        obstacles.Add((94,108));
-        obstacles.Add((95,108));
-        obstacles.Add((96,108));
-        obstacles.Add((96,109));
-        obstacles.Add((97,109));
-        obstacles.Add((98,109));
-        obstacles.Add((98,110));
-        obstacles.Add((99,110));
+        obstacles.Add((111, 101));
+        obstacles.Add((112, 101));
+        obstacles.Add((112, 100));
+        obstacles.Add((113, 100));
+        obstacles.Add((113, 99));
+        obstacles.Add((113, 98));
+        obstacles.Add((113, 97));
+        obstacles.Add((113, 96));
+        obstacles.Add((113, 95));
+        obstacles.Add((112, 95));
+        obstacles.Add((112, 94));
+        obstacles.Add((111, 95));
+        obstacles.Add((111, 94));
+        obstacles.Add((110, 94));
+        obstacles.Add((110, 93));
+        obstacles.Add((110, 93));
+        obstacles.Add((109, 93));
+        obstacles.Add((108, 93));
+        obstacles.Add((107, 93));
+        obstacles.Add((107, 92));
+        obstacles.Add((106, 92));
+        obstacles.Add((105, 92));
+        obstacles.Add((104, 92));
+        obstacles.Add((103, 92));
+        obstacles.Add((103, 93));
+        obstacles.Add((102, 93));
+        obstacles.Add((101, 93));
+        obstacles.Add((100, 93));
+        obstacles.Add((99, 93));
+        obstacles.Add((99, 94));
+        obstacles.Add((98, 94));
+        obstacles.Add((97, 94));
+        obstacles.Add((97, 95));
+        obstacles.Add((96, 95));
+        obstacles.Add((95, 95));
+        obstacles.Add((95, 96));
+        obstacles.Add((94, 96));
+        obstacles.Add((94, 97));
+        obstacles.Add((94, 98));
+        obstacles.Add((93, 98));
+        obstacles.Add((93, 99));
+        obstacles.Add((93, 100));
+        obstacles.Add((93, 101));
+        obstacles.Add((92, 101));
+        obstacles.Add((92, 102));
+        obstacles.Add((92, 103));
+        obstacles.Add((92, 104));
+        obstacles.Add((93, 104));
+        obstacles.Add((93, 105));
+        obstacles.Add((93, 106));
+        obstacles.Add((94, 105));
+        obstacles.Add((94, 106));
+        obstacles.Add((94, 107));
+        obstacles.Add((94, 108));
+        obstacles.Add((95, 108));
+        obstacles.Add((96, 108));
+        obstacles.Add((96, 109));
+        obstacles.Add((97, 109));
+        obstacles.Add((98, 109));
+        obstacles.Add((98, 110));
+        obstacles.Add((99, 110));
 
         // (150, 150)
         obstacles.Add((146, 162));
@@ -1664,7 +1662,7 @@ class Program
 
         pathFinder.Start = lastPath;
         pathFinder.PreviousHitObstacle = pathFinder.HitObstacle;
-        foreach(var item in path) { pathFinder.Closed.Add(item); }
+        foreach (var item in path) { pathFinder.Closed.Add(item); }
 
         return FindPathRecursive(pathFinder, currentPath);
     }
