@@ -80,21 +80,22 @@ public class PathFinder(
             // Skip if the current point is out of bounds or too far from the start
             if (distance > sightRange) { continue; }
 
-            // Check if the current point is a valid edge
-            var nearTiles = GetNeighborTiles(currentTargetEdgePoint);
-            foreach (var tile in nearTiles)
-            {
-                if (!obstacles.Contains(tile))
-                {
-                    if (distanceFromOrigin > 10 && currentTargetEdgePoint == HitObstacle)
+            if(obstacles.Contains(currentTargetEdgePoint)) {
+                // Check if the current point is a valid edge
+                var nearTiles = GetNeighborTiles(currentTargetEdgePoint);
+                foreach (var tile in nearTiles) {
+                    if (tile != origin && !obstacles.Contains(tile))
                     {
-                        validEdges.Add(currentTargetEdgePoint);
-                        break;
-                    }
-                    else if (IsReachableDirectly(origin, currentTargetEdgePoint).Item1)
-                    {
-                        validEdges.Add(currentTargetEdgePoint);
-                        break;
+                        if (distanceFromOrigin > 10 && currentTargetEdgePoint == HitObstacle)
+                        {
+                            validEdges.Add(currentTargetEdgePoint);
+                            break;
+                        }
+                        else if (IsReachableDirectly(origin, currentTargetEdgePoint).Item1)
+                        {
+                            validEdges.Add(currentTargetEdgePoint);
+                            break;
+                        }
                     }
                 }
             }
@@ -1061,6 +1062,7 @@ public class PathFinder(
         {
             if (direction == "")
             {
+                if(PreviousOrigin == (-1, -1)) { PreviousOrigin = origin; }
                 var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, left);
                 var distanceFromPreviousOriginToRight = CalculateDistance(PreviousOrigin, right);
                 if (distanceFromPreviousOriginToLeft > distanceFromPreviousOriginToRight) { direction = "left"; }
@@ -1269,7 +1271,7 @@ class Program
                                                                                                             (8, 1),
                                     (2, 2),         (3, 2),                                                 (8, 2),
                                     (2, 3),                                                                 (8, 3),
-                                                                                                (7, 4),     (8, 4),
+                                                                                                            (8, 4),
                                                     (3, 5),     (4, 5), (5, 5),     (6, 5),     (7, 5),
                                                     (3, 6),
                                                     (3, 7),             (5, 7),     (6, 7),
