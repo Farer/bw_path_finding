@@ -1648,17 +1648,24 @@ class Program
         stopwatch.Start();
         var (finalPath, pathCase) = FindPathRecursive(pathFinder, []);
         stopwatch.Stop();
-        Console.WriteLine("Start: " + start + " -> Goal: " + goal);
-        Console.WriteLine("BW Total Elapsed time: " + stopwatch.ElapsedMilliseconds + "ms");
+        
         Console.WriteLine("pathCase: " + pathCase);
+        Console.WriteLine("BW Path");
         foreach (var item in finalPath)
         {
-            Console.WriteLine("finalPath: " + item);
+            Console.WriteLine(item);
         }
+        Console.WriteLine();
+        Console.WriteLine("Start: " + start + " -> Goal: " + goal);
+        Console.WriteLine();
+        Console.WriteLine("BW Path Count: " + finalPath.Count);
+        Console.WriteLine("BW Total Elapsed time: " + stopwatch.ElapsedMilliseconds + "ms");
 
         stopwatch.Restart();
         var astarPath = AStar(start, goal, tileRangeStart, tileRangeEnd, obstacles);
         stopwatch.Stop();
+        Console.WriteLine();
+        Console.WriteLine("A* Path Count: " + astarPath.Count);
         Console.WriteLine("A* Total Elapsed time: " + stopwatch.ElapsedMilliseconds + "ms");
         // foreach (var item in astarPath)
         // {
