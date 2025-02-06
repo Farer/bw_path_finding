@@ -1647,8 +1647,9 @@ class Program
         );
 
         Stopwatch stopwatch = new();
+        var currentPath = new List<(int X, int Y)>();
         stopwatch.Start();
-        var (finalPath, pathCase) = FindPathRecursive(pathFinder, []);
+        var (finalPath, pathCase) = FindPathRecursive(pathFinder, ref currentPath);
         stopwatch.Stop();
         
         Console.WriteLine("pathCase: " + pathCase);
@@ -1675,7 +1676,7 @@ class Program
         // }
     }
 
-    public static (List<(int X, int Y)>, PathCase) FindPathRecursive(PathFinder pathFinder, List<(int X, int Y)> currentPath)
+    public static (List<(int X, int Y)>, PathCase) FindPathRecursive(PathFinder pathFinder, ref List<(int X, int Y)> currentPath)
     {
         var (path, pathCase) = pathFinder.FindPath();
         if (path.Count == 0) { return (currentPath, pathCase); }
@@ -1689,7 +1690,7 @@ class Program
         pathFinder.PreviousHitObstacle = pathFinder.HitObstacle;
         foreach (var item in path) { pathFinder.Closed.Add(item); }
 
-        return FindPathRecursive(pathFinder, currentPath);
+        return FindPathRecursive(pathFinder, ref currentPath);
     }
 
     static List<(int X, int Y)> AStar(
