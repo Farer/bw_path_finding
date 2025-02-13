@@ -64,9 +64,13 @@ public class PathFinder(
     public long ElapsedTime = 0L;
     public List<(int X, int Y)> GetAllValidEdgesFromHitObstacle((int X, int Y) origin, (int X, int Y) hitObstacle, int sightRange, HashSet<(int X, int Y)> obstacles)
     {
+        // List to hold valid edge tiles (tiles that can serve as detour points)
         var validEdges = new List<(int X, int Y)>();
+        // Queue for breadth-first search (BFS), storing a tile and its distance from the starting hitObstacle
         var targetEdgeQueue = new Queue<((int X, int Y) point, int distance)>();
+        // Set to keep track of visited tiles so they are not processed more than once
         var visited = new HashSet<(int X, int Y)>();
+        // Calculate the Euclidean distance from the origin to the initial hitObstacle
         var distanceFromOrigin = CalculateDistance(origin, hitObstacle);
 
         targetEdgeQueue.Enqueue((hitObstacle, 0));
@@ -74,33 +78,53 @@ public class PathFinder(
 
         while (targetEdgeQueue.Count > 0)
         {
-            // Dequeue the current point and distance
             var (currentTargetEdgePoint, distance) = targetEdgeQueue.Dequeue();
 
-            // Skip if the current point is out of bounds or too far from the start
+            // Skip if the current tile is beyond the sight range
             if (distance > sightRange) { continue; }
 
-            if(obstacles.Contains(currentTargetEdgePoint)) {
-                // Check if the current point is a valid edge
-                var nearTiles = GetNeighborTiles(currentTargetEdgePoint);
-                foreach (var tile in nearTiles) {
-                    if (tile != origin && !obstacles.Contains(tile))
+            // Process only if the current tile is an obstacle
+            if (obstacles.Contains(currentTargetEdgePoint))
+            {
+                bool addCurrentEdge = false;
+
+                // 1. Fallback condition: if the distance from origin is sufficiently large and the current tile is the original hitObstacle, add it as valid
+                if (distanceFromOrigin > 10 && currentTargetEdgePoint == hitObstacle)
+                {
+                    addCurrentEdge = true;
+                }
+
+                // 2. If the obstacle tile itself is directly reachable from the origin (using Bresenham’s algorithm), add it as valid
+                if (!addCurrentEdge && IsReachableDirectly(origin, currentTargetEdgePoint).Item1)
+                {
+                    addCurrentEdge = true;
+                }
+
+                // 3. Otherwise, check if any adjacent non-obstacle tile is directly reachable from the origin
+                if (!addCurrentEdge)
+                {
+                    var nearTiles = GetNeighborTiles(currentTargetEdgePoint);
+                    foreach (var tile in nearTiles)
                     {
-                        if (distanceFromOrigin > 10 && currentTargetEdgePoint == HitObstacle)
+                        if (tile != origin && !obstacles.Contains(tile))
                         {
-                            validEdges.Add(currentTargetEdgePoint);
-                            break;
-                        }
-                        else if (IsReachableDirectly(origin, currentTargetEdgePoint).Item1)
-                        {
-                            validEdges.Add(currentTargetEdgePoint);
-                            break;
+                            // if (IsReachableDirectly(origin, tile).Item1)
+                            if (IsReachableDirectly(origin, currentTargetEdgePoint).Item1)
+                            {
+                                addCurrentEdge = true;
+                                break;
+                            }
                         }
                     }
                 }
+
+                if (addCurrentEdge)
+                {
+                    validEdges.Add(currentTargetEdgePoint);
+                }
             }
 
-            // Explore adjacent tiles
+            // Explore adjacent tiles (including diagonals) of the current tile
             var adjacentTilesOfTargetTile = GetAdjacentTiles(currentTargetEdgePoint);
             foreach (var targetEdgeNeighbor in adjacentTilesOfTargetTile)
             {
@@ -113,6 +137,8 @@ public class PathFinder(
         }
         return validEdges;
     }
+
+
     public bool HasNeighborOutOfBound((int X, int Y) targetTile)
     {
         var nearTiles = GetNeighborTiles(targetTile);
@@ -498,34 +524,51 @@ public class PathFinder(
 
         return (leftCandidate, rightCandidate);
     }
-    public ((int x, int y) leftMostTarget, (int x, int y) rightMostTarget) FindExtremeAngleTargets(
-        (int X, int Y) origin,
-        IEnumerable<(int X, int Y)> targets,
-        bool isReachable = false
-    )
+    public ((int x, int y) leftMostTarget, (int x, int y) rightMostTarget)? FindExtremeAngleTargets(
+    (int X, int Y) origin,
+    IEnumerable<(int X, int Y)> targets,
+    bool isReachable = false
+)
     {
+        // Create a list to hold candidate targets for extreme angles
         var finalCandidates = new List<(int X, int Y)>();
         foreach (var item in targets)
         {
+            // Skip the target if it is an obstacle
             if (Obstacles.Contains(item)) { continue; }
             if (isReachable)
             {
-                if (origin != item && IsReachableDirectly(origin, item).Item1) { finalCandidates.Add(item); }
+                // If reachability is required, add the target only if it is directly reachable from the origin
+                if (origin != item && IsReachableDirectly(origin, item).Item1)
+                    finalCandidates.Add(item);
             }
-            else { finalCandidates.Add(item); }
+            else
+            {
+                finalCandidates.Add(item);
+            }
         }
-        // calculate the angle (in radians)
-        List<(double angle, (int x, int y) target)> angles = [.. finalCandidates.Select(target => {
+
+        // If there are no candidates, return null
+        if (finalCandidates.Count == 0)
+        {
+            return null;
+        }
+
+        // Calculate the angle (in radians) from the origin to each candidate target
+        var angles = finalCandidates.Select(target =>
+        {
             double angle = Math.Atan2(target.Y - origin.Y, target.X - origin.X);
             return (angle, target);
-        })];
+        }).ToList();
 
-        // calculate the leftmost and rightmost targets
+        // Order candidates by angle to determine the extreme (leftmost and rightmost) targets
         var leftMost = angles.OrderBy(a => a.angle).First();
         var rightMost = angles.OrderByDescending(a => a.angle).First();
 
         return (leftMost.target, rightMost.target);
     }
+
+
 
     // Helper function to calculate the Euclidean distance between two points.
     public static double CalculateDistance((int X, int Y) p1, (int X, int Y) p2)
@@ -1033,16 +1076,19 @@ public class PathFinder(
     }
     private (int X, int Y) GetFinalDetourPointWithMiultipleValidEdges((int X, int Y) origin, List<(int X, int Y)> validEdges)
     {
-        // Stopwatch stopwatch = new();
-        // stopwatch.Start();
-
+        // Retrieve the outermost edges (leftmost and rightmost) from the validEdges list relative to the origin.
         var outerMostEdges = FindOuterMostTiles(origin, validEdges);
-        // Console.WriteLine($"leftmost: {outerMostEdges?.Item1}, rightmost: {outerMostEdges?.Item2}");
+        if (outerMostEdges is null)
+        {
+            Console.WriteLine("No outermost edges");
+            return (-1, -1);
+        }
 
-        var left = outerMostEdges!.Value.Item1;
-        var right = outerMostEdges!.Value.Item2;
+        var left = outerMostEdges.Value.Item1;
+        var right = outerMostEdges.Value.Item2;
         if (left == right) { return left; }
 
+        // Determine if the left or right candidate is near the border of the map.
         bool isLeftNearTheBorder = HasNeighborOutOfBound(left);
         bool isRightNearTheBorder = HasNeighborOutOfBound(right);
 
@@ -1050,19 +1096,20 @@ public class PathFinder(
         string direction = "";
         if (isLeftNearTheBorder)
         {
-            // Console.WriteLine("Left edge is near the border");
+            // If the left edge is near the border, choose to detour to the right.
             direction = "right";
         }
         else if (isRightNearTheBorder)
         {
-            // Console.WriteLine("Right edge is near the border");
+            // If the right edge is near the border, choose to detour to the left.
             direction = "left";
         }
         else if (!isLeftNearTheBorder && !isRightNearTheBorder)
         {
+            // If neither is near the border, decide based on previous origin distance or valid adjacent counts.
             if (direction == "")
             {
-                if(PreviousOrigin == (-1, -1)) { PreviousOrigin = origin; }
+                if (PreviousOrigin == (-1, -1)) { PreviousOrigin = origin; }
                 var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, left);
                 var distanceFromPreviousOriginToRight = CalculateDistance(PreviousOrigin, right);
                 if (distanceFromPreviousOriginToLeft > distanceFromPreviousOriginToRight) { direction = "left"; }
@@ -1073,8 +1120,6 @@ public class PathFinder(
             {
                 var leftValidNeighborCount = GetValidAdjacentCount(left);
                 var rightValidNeighborCount = GetValidAdjacentCount(right);
-                // Console.WriteLine("leftDetourpointValidNeighborCount: " + leftValidNeighborCount);
-                // Console.WriteLine("rightDetourpointValidNeighborCount: " + rightValidNeighborCount);
                 if (leftValidNeighborCount > rightValidNeighborCount) { direction = "left"; }
                 else if (rightValidNeighborCount > leftValidNeighborCount) { direction = "right"; }
             }
@@ -1083,49 +1128,39 @@ public class PathFinder(
             {
                 var distanToLeft = CalculateDistance(origin, left);
                 var distanToRight = CalculateDistance(origin, right);
-                if (distanToLeft < distanToRight) { direction = "left"; }
-                else { direction = "right"; }
+                direction = (distanToLeft < distanToRight) ? "left" : "right";
             }
-
         }
-        if (direction == "left") { finalTargetEdge = left; }
-        else if (direction == "right") { finalTargetEdge = right; }
-        // Console.WriteLine();
-
+        // Select the final target edge based on the determined direction
+        finalTargetEdge = (direction == "left") ? left : (direction == "right") ? right : (-1, -1);
         if (finalTargetEdge == (-1, -1))
         {
-            // Console.WriteLine("No path. Both edges are not near the border");
             Environment.Exit(0);
         }
-        else
-        {
-            // Console.WriteLine($"Final Target Edge: {finalTargetEdge}");
-            // Console.WriteLine();
-        }
 
-        // Find the best detour point
+        // Retrieve adjacent tiles of the final target edge as potential detour candidates.
         var detourCandidates = GetAdjacentTiles(finalTargetEdge);
         var filteredDetourCandidates = new List<(int, int)>();
-        // if (detourCandidates.Count > 0) { Console.Write("Detour Candidate: "); }
-
         foreach (var item in detourCandidates)
         {
-            if (origin == item)
-            {
-                // Console.WriteLine();
-                // Console.WriteLine($"Same with start: {item}");
-                // Console.WriteLine();
-                continue;
-            }
-            if (Closed.Contains(item) || Obstacles.Contains(item) || !IsReachableDirectly(origin, item).Item1) { continue; }
+            // Skip the candidate if it is the origin
+            if (origin == item) continue;
+            // Skip if the candidate is closed, is an obstacle, or not directly reachable from the origin
+            if (Closed.Contains(item) || Obstacles.Contains(item) || !IsReachableDirectly(origin, item).Item1) continue;
             filteredDetourCandidates.Add(item);
-            // Console.Write(" " + item);
         }
-        // Console.WriteLine();
-        var (leftMostTarget, rightMostTarget) = FindExtremeAngleTargets(origin, filteredDetourCandidates, true);
-        // Console.WriteLine("direction: " + direction);
-        var bestDetourPoint = (-1, -1);
 
+        // Use FindExtremeAngleTargets to get the extreme (leftmost and rightmost) detour candidates.
+        var extremeTargets = FindExtremeAngleTargets(origin, filteredDetourCandidates, true);
+        if (extremeTargets == null)
+        {
+            // Fallback: if there are any candidates, return the first one; otherwise, return (-1, -1)
+            return filteredDetourCandidates.Count > 0 ? filteredDetourCandidates[0] : (-1, -1);
+        }
+        var (leftMostTarget, rightMostTarget) = extremeTargets.Value;
+        (int X, int Y) bestDetourPoint = (-1, -1);
+
+        // If there is a previous origin, choose the candidate that is farther from it
         if (PreviousOrigin != (-1, -1) && bestDetourPoint == (-1, -1))
         {
             var distanceFromPreviousOriginToLeft = CalculateDistance(PreviousOrigin, leftMostTarget);
@@ -1136,17 +1171,12 @@ public class PathFinder(
 
         if (bestDetourPoint == (-1, -1))
         {
-            if (direction == "left") { bestDetourPoint = leftMostTarget; }
-            else if (direction == "right") { bestDetourPoint = rightMostTarget; }
+            bestDetourPoint = direction == "left" ? leftMostTarget : rightMostTarget;
         }
-
-        // stopwatch.Stop(); ElapsedTime += stopwatch.ElapsedMilliseconds;
-        // Console.WriteLine();
-        // Console.WriteLine($"Elapsed time: {stopwatch.ElapsedMilliseconds}ms");
-        // Console.WriteLine($"bestDetourPoint: {bestDetourPoint}");
-
         return bestDetourPoint;
     }
+
+
     public static List<(int X, int Y)> SimplifyWaypoints(List<(int X, int Y)> waypoints)
     {
         if (waypoints.Count < 2) { return waypoints; }
@@ -1266,19 +1296,20 @@ class Program
 {
     static void Main()
     {
-        var obstacles = new HashSet<(int X, int Y)>() {
-                                                                                                            (8, 0),
-                                                                                                            (8, 1),
-                                    (2, 2),         (3, 2),                                                 (8, 2),
-                                    (2, 3),                                                                 (8, 3),
-                                                                                                            (8, 4),
-                                                    (3, 5),     (4, 5), (5, 5),     (6, 5),     (7, 5),
-                                                    (3, 6),
-                                                    (3, 7),             (5, 7),     (6, 7),
-                                                    (3, 8),             (5, 8),     (6, 8),
-                                                    (3, 9),             (5, 9),                 (7, 9),
-                                                    (3, 10),                (5, 10),            (7, 10),
-                        (1, 11),    (2, 11)
+        var obstacles = new HashSet<(int X, int Y)>()
+        {
+                                                                                                (8, 0),
+                                                                                                (8, 1),
+                        (2, 2),         (3, 2),                                                 (8, 2),
+                        (2, 3),                                                                 (8, 3),
+                                                                                                (8, 4),
+                                        (3, 5),     (4, 5), (5, 5),     (6, 5),     (7, 5),
+                                        (3, 6),
+                                        (3, 7),             (5, 7),     (6, 7),
+                                        (3, 8),             (5, 8),     (6, 8),
+                                        (3, 9),             (5, 9),                 (7, 9),
+                                        (3, 10),                (5, 10),            (7, 10),
+            (1, 11),    (2, 11)
         };
 
         // (50, 50)
@@ -1627,6 +1658,42 @@ class Program
         start = (7, 3); goal = (250, 250); closed = [];
         start = (7, 3); goal = (300, 300); closed = [];
 
+        /**
+        **TEST
+        **/
+        // obstacles.Clear();
+        // for (var x = 16464; x < 16528; x++)
+        // {
+        //     for (var y = 4576; y < 4592; y++)
+        //     {
+        //         obstacles.Add((x, y));
+        //     }
+        // }
+        // for (var x = 16464; x < 16512; x++)
+        // {
+        //     for (var y = 4592; y < 4608; y++)
+        //     {
+        //         obstacles.Add((x, y));
+        //     }
+        // }
+        // for (var x = 16464; x < 16496; x++)
+        // {
+        //     for (var y = 4608; y < 4624; y++)
+        //     {
+        //         obstacles.Add((x, y));
+        //     }
+        // }
+
+        // sightRange = 16 * 16;
+        // moveRange = 1000;
+        // tileRangeStart = (0, 0);
+        // tileRangeEnd = (20000, 20000);
+        // closed = new HashSet<(int X, int Y)>();
+        // hitObstacle = (-1, -1);
+        // start = (16512, 4592); goal = (16496, 4613); closed = [];
+        /****/
+        /****/
+
         // start = (3, 4); goal = (9, 4); closed = [(7,3)]; hitObstacle = (8,3);
         // start = (2, 4); goal = (9, 4); closed = [(2,4),(3,4),(7,3),]; hitObstacle = (7,4);
         // start = (0, 10); goal = (9, 4); closed = [(2,4),(3,4),(7,3),]; hitObstacle = (7,4);
@@ -1651,7 +1718,7 @@ class Program
         stopwatch.Start();
         var (finalPath, pathCase) = FindPathRecursive(pathFinder, ref currentPath);
         stopwatch.Stop();
-        
+
         Console.WriteLine("pathCase: " + pathCase);
         Console.WriteLine("BW Path");
         foreach (var item in finalPath)
