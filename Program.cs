@@ -374,6 +374,8 @@ public class PathFinder(
 
             while (true)
             {
+                var aaa = Obstacles.Contains((x, y));
+                bool bbb = (x, y) != to;
                 if (Obstacles.Contains((x, y)) && (x, y) != to)
                 {
                     isReachable = false;
