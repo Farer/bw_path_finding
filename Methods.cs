@@ -13,7 +13,8 @@ public static class Methods
         HashSet<Color> validColors =
         [
             Color.FromArgb(238, 237, 235), // EEEDEB
-            Color.FromArgb(255, 106, 0)    // FF6A00
+            Color.FromArgb(255, 106, 0),   // FF6A00
+            Color.FromArgb(19, 127, 33)    // 137F21
         ];
 
         var obstaclesTiles = new List<(int X, int Y)>();
