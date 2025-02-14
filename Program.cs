@@ -1658,92 +1658,20 @@ class Program
         start = (7, 3); goal = (250, 250); closed = [];
         start = (7, 3); goal = (300, 300); closed = [];
 
-        /**
-        ** TEST 1
-        **/
-        // obstacles.Clear();
-        // for (var x = 16464; x < 16528; x++)
-        // {
-        //     for (var y = 4576; y < 4592; y++)
-        //     {
-        //         obstacles.Add((x, y));
-        //     }
-        // }
-        // for (var x = 16464; x < 16512; x++)
-        // {
-        //     for (var y = 4592; y < 4608; y++)
-        //     {
-        //         obstacles.Add((x, y));
-        //     }
-        // }
-        // for (var x = 16464; x < 16496; x++)
-        // {
-        //     for (var y = 4608; y < 4624; y++)
-        //     {
-        //         obstacles.Add((x, y));
-        //     }
-        // }
+        /** TEST **/
+        // var topLeftX = 17920; var topLeftY = 13056; 
+        // var filePath = "Assets/Untitled.png";
+        // start = (17998, 13167); goal = (18040, 13128); closed = [];
+        // Methods.RearrangeTileRange(start, goal, ref tileRangeStart, ref tileRangeEnd);
+        // // tileRangeStart = (17920, 13056); tileRangeEnd = (18112, 13248);
 
         // sightRange = 16 * 16;
         // moveRange = 1000;
-        // tileRangeStart = (0, 0);
-        // tileRangeEnd = (20000, 20000);
-        // hitObstacle = (-1, -1);
-        // start = (16512, 4592); goal = (16496, 4613); closed = [];
-        /**
-        ** TEST 1 END
-        **/
-
-
-        /**
-        ** TEST 2
-        **/
         // obstacles.Clear();
-        // for (var x = 21800; x < 21824; x++)
-        // {
-        //     for (var y = 13328; y < 13352; y++)
-        //     {
-        //         obstacles.Add((x, y));
-        //     }
-        // }
-        // for (var x = 21856; x < 21887; x++)
-        // {
-        //     for (var y = 13296; y < 13352; y++)
-        //     {
-        //         obstacles.Add((x, y));
-        //     }
-        // }
-        // for (var x = 21872; x < 21887; x++)
-        // {
-        //     for (var y = 13271; y < 13296; y++)
-        //     {
-        //         obstacles.Add((x, y));
-        //     }
-        // }
-        // for (var x = 21840; x < 21856; x++)
-        // {
-        //     for (var y = 13312; y < 13352; y++)
-        //     {
-        //         obstacles.Add((x, y));
-        //     }
-        // }
-        // for (var x = 21824; x < 21840; x++)
-        // {
-        //     for (var y = 13328; y < 13352; y++)
-        //     {
-        //         obstacles.Add((x, y));
-        //     }
-        // }
-
-        // sightRange = 16 * 16;
-        // moveRange = 1000;
-        // tileRangeStart = (21800, 13271);
-        // tileRangeEnd = (21887, 13352);
+        // obstacles = Methods.GatherDebugMepData(topLeftX, topLeftY, filePath);
         // hitObstacle = (-1, -1);
-        // start = (21855, 13302); goal = (21832, 13320); closed = [];
-        /**
-        ** TEST 2 END
-        **/
+        /** TEST END **/
+
 
         var pathFinder = new PathFinder(
             tileRangeStart: tileRangeStart,
