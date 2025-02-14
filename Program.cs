@@ -1659,7 +1659,7 @@ class Program
         start = (7, 3); goal = (300, 300); closed = [];
 
         /**
-        **TEST
+        ** TEST 1
         **/
         // obstacles.Clear();
         // for (var x = 16464; x < 16528; x++)
@@ -1688,17 +1688,62 @@ class Program
         // moveRange = 1000;
         // tileRangeStart = (0, 0);
         // tileRangeEnd = (20000, 20000);
-        // closed = new HashSet<(int X, int Y)>();
         // hitObstacle = (-1, -1);
         // start = (16512, 4592); goal = (16496, 4613); closed = [];
-        /****/
-        /****/
+        /**
+        ** TEST 1 END
+        **/
 
-        // start = (3, 4); goal = (9, 4); closed = [(7,3)]; hitObstacle = (8,3);
-        // start = (2, 4); goal = (9, 4); closed = [(2,4),(3,4),(7,3),]; hitObstacle = (7,4);
-        // start = (0, 10); goal = (9, 4); closed = [(2,4),(3,4),(7,3),]; hitObstacle = (7,4);
-        // start = (0, 11); goal = (9, 4); closed = [(0,10),(2,4),(3,4),(7,3),]; hitObstacle = (3,9);
-        // start = (0, 12); goal = (9, 4); closed = [(0,11),(0,10),(2,4),(3,4),(7,3),]; hitObstacle = (1,11);
+
+        /**
+        ** TEST 2
+        **/
+        // obstacles.Clear();
+        // for (var x = 21800; x < 21824; x++)
+        // {
+        //     for (var y = 13328; y < 13352; y++)
+        //     {
+        //         obstacles.Add((x, y));
+        //     }
+        // }
+        // for (var x = 21856; x < 21887; x++)
+        // {
+        //     for (var y = 13296; y < 13352; y++)
+        //     {
+        //         obstacles.Add((x, y));
+        //     }
+        // }
+        // for (var x = 21872; x < 21887; x++)
+        // {
+        //     for (var y = 13271; y < 13296; y++)
+        //     {
+        //         obstacles.Add((x, y));
+        //     }
+        // }
+        // for (var x = 21840; x < 21856; x++)
+        // {
+        //     for (var y = 13312; y < 13352; y++)
+        //     {
+        //         obstacles.Add((x, y));
+        //     }
+        // }
+        // for (var x = 21824; x < 21840; x++)
+        // {
+        //     for (var y = 13328; y < 13352; y++)
+        //     {
+        //         obstacles.Add((x, y));
+        //     }
+        // }
+
+        // sightRange = 16 * 16;
+        // moveRange = 1000;
+        // tileRangeStart = (21800, 13271);
+        // tileRangeEnd = (21887, 13352);
+        // hitObstacle = (-1, -1);
+        // start = (21855, 13302); goal = (21832, 13320); closed = [];
+        /**
+        ** TEST 2 END
+        **/
 
         var pathFinder = new PathFinder(
             tileRangeStart: tileRangeStart,
