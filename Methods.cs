@@ -3,7 +3,7 @@ using System.Drawing;
 namespace bw_path_finding;
 public static class Methods
 {
-    public static HashSet<(int X, int Y)> GatherDebugMepData(int topLeftX, int topLeftY, string imageFileFullPath)
+    public static HashSet<(int X, int Y)> GatherDebugMepData((int X, int Y) topLeft, string imageFileFullPath)
     {
         string currentDirectory = AppContext.BaseDirectory;
         var imagePath = Path.Combine(currentDirectory, imageFileFullPath);
@@ -31,8 +31,8 @@ public static class Methods
                     if(imgX == 4 && imgY == 6) {
                         Console.WriteLine(pixelColor);
                     }
-                    int worldX = topLeftX + imgX * tileSize;
-                    int worldY = topLeftY + imgY * tileSize;
+                    int worldX = topLeft.X + imgX * tileSize;
+                    int worldY = topLeft.Y + imgY * tileSize;
                     int posX = worldX / tileSize;
                     int posY = worldY / tileSize;
                     if(posX == 1124 && posY == 822) {

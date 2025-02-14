@@ -1659,17 +1659,12 @@ class Program
         start = (7, 3); goal = (300, 300); closed = [];
 
         /** TEST **/
-        // var topLeftX = 17920; var topLeftY = 13056; 
-        // var filePath = "Assets/Untitled.png";
         // start = (17998, 13167); goal = (18040, 13128); closed = [];
+        // (int X, int Y) topLeft = (17920, 13056);
+        // var filePath = "Assets/Untitled.png";
         // Methods.RearrangeTileRange(start, goal, ref tileRangeStart, ref tileRangeEnd);
-        // // tileRangeStart = (17920, 13056); tileRangeEnd = (18112, 13248);
-
-        // sightRange = 16 * 16;
-        // moveRange = 1000;
-        // obstacles.Clear();
-        // obstacles = Methods.GatherDebugMepData(topLeftX, topLeftY, filePath);
-        // hitObstacle = (-1, -1);
+        // sightRange = 16 * 16; moveRange = 1000; obstacles.Clear(); hitObstacle = (-1, -1);
+        // obstacles = Methods.GatherDebugMepData(topLeft, filePath);
         /** TEST END **/
 
 
