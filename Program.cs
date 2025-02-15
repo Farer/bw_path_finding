@@ -463,68 +463,45 @@ public class PathFinder(
     {
         // Validate input: if no valid tile is provided, return null.
         // If there's only one tile, return that tile for both leftmost and rightmost.
-        if (validEdgeTiles == null || validEdgeTiles.Count == 0) { return null; }
-        if (validEdgeTiles.Count == 1) { return (validEdgeTiles[0], validEdgeTiles[0]); }
+        if (validEdgeTiles == null || validEdgeTiles.Count == 0)
+            return null;
+        if (validEdgeTiles.Count == 1)
+            return (validEdgeTiles[0], validEdgeTiles[0]);
 
-        // Calculate the angle from the origin to each valid edge tile
-        // and store the results in a list.
-        // Normalize the angle to the range [0, 2π)
-        var angles = validEdgeTiles.Select(edge => new
+        // Compute normalized angles for each edge tile relative to originTile.
+        var angleList = validEdgeTiles.Select(edge => new
         {
             Edge = edge,
             Angle = NormalizeAngle(Math.Atan2(edge.Y - originTile.Y, edge.X - originTile.X))
         }).ToList();
 
         // Sort the list by angle in ascending order.
-        angles.Sort((a, b) => a.Angle.CompareTo(b.Angle));
+        angleList.Sort((a, b) => a.Angle.CompareTo(b.Angle));
+        int n = angleList.Count;
 
-        const double epsilon = 1e-10; // Tolerance for floating-point comparison
-
-        // Select the leftmost candidate (smallest angle).
-        // Iterate from the beginning until the angle deviates more than epsilon.
-        double leftmostAngle = angles[0].Angle;
-        var leftCandidate = angles[0].Edge;
-        double leftMaxDistance = CalculateDistance(originTile, leftCandidate);
-
-        for (int i = 1; i < angles.Count; i++)
+        // Find the maximum gap between consecutive angles (including wrap-around).
+        double maxGap = -1;
+        int maxGapIndex = -1;
+        for (int i = 0; i < n - 1; i++)
         {
-            if (Math.Abs(angles[i].Angle - leftmostAngle) <= epsilon)
+            double gap = angleList[i + 1].Angle - angleList[i].Angle;
+            if (gap > maxGap)
             {
-                double distance = CalculateDistance(originTile, angles[i].Edge);
-                if (distance > leftMaxDistance)
-                {
-                    leftMaxDistance = distance;
-                    leftCandidate = angles[i].Edge;
-                }
-            }
-            else
-            {
-                break; // Exit the loop when encountering a significantly different angle.
+                maxGap = gap;
+                maxGapIndex = i;
             }
         }
-
-        // Select the rightmost candidate (largest angle).
-        // Iterate from the end until the angle deviates more than epsilon.
-        double rightmostAngle = angles[^1].Angle;
-        var rightCandidate = angles[^1].Edge;
-        double rightMaxDistance = CalculateDistance(originTile, rightCandidate);
-
-        for (int i = angles.Count - 2; i >= 0; i--)
+        // Compute the wrap-around gap between the last and first element.
+        double wrapGap = (angleList[0].Angle + 2 * Math.PI) - angleList[n - 1].Angle;
+        if (wrapGap > maxGap)
         {
-            if (Math.Abs(angles[i].Angle - rightmostAngle) <= epsilon)
-            {
-                double distance = CalculateDistance(originTile, angles[i].Edge);
-                if (distance > rightMaxDistance)
-                {
-                    rightMaxDistance = distance;
-                    rightCandidate = angles[i].Edge;
-                }
-            }
-            else
-            {
-                break; // Exit the loop when the angle deviates beyond the tolerance.
-            }
+            maxGap = wrapGap;
+            maxGapIndex = n - 1;
         }
+
+        // The two extreme edges are defined as the tiles immediately after and before the largest gap.
+        var leftCandidate = angleList[(maxGapIndex + 1) % n].Edge;  // More counterclockwise side
+        var rightCandidate = angleList[maxGapIndex].Edge;            // More clockwise side
 
         return (leftCandidate, rightCandidate);
     }
