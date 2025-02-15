@@ -468,10 +468,11 @@ public class PathFinder(
 
         // Calculate the angle from the origin to each valid edge tile
         // and store the results in a list.
+        // Normalize the angle to the range [0, 2π)
         var angles = validEdgeTiles.Select(edge => new
         {
             Edge = edge,
-            Angle = Math.Atan2(edge.Y - originTile.Y, edge.X - originTile.X)
+            Angle = NormalizeAngle(Math.Atan2(edge.Y - originTile.Y, edge.X - originTile.X))
         }).ToList();
 
         // Sort the list by angle in ascending order.
@@ -526,6 +527,14 @@ public class PathFinder(
         }
 
         return (leftCandidate, rightCandidate);
+    }
+    private static double NormalizeAngle(double angle)
+    {
+        if (angle < 0)
+        {
+            angle += 2 * Math.PI;
+        }
+        return angle;
     }
     public ((int x, int y) leftMostTarget, (int x, int y) rightMostTarget)? FindExtremeAngleTargets(
     (int X, int Y) origin,
