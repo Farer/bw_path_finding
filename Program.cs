@@ -89,13 +89,14 @@ public class PathFinder(
                 bool addCurrentEdge = false;
 
                 // 1. Fallback condition: if the distance from origin is sufficiently large and the current tile is the original hitObstacle, add it as valid
+                // if (distanceFromOrigin > 10 && currentTargetEdgePoint == hitObstacle)
                 if (distanceFromOrigin > 10 && currentTargetEdgePoint == hitObstacle)
                 {
                     addCurrentEdge = true;
                 }
 
-                // 2. If the obstacle tile itself is directly reachable from the origin (using Bresenham’s algorithm and new method), add it as valid
-                if (!addCurrentEdge && IsReachableDirectlyOrViaNeighbor(origin, currentTargetEdgePoint).Item1)
+                // 2. If the obstacle tile itself is directly reachable from the origin (using Bresenham’s algorithm), add it as valid
+                if (!addCurrentEdge && IsReachableDirectly(origin, currentTargetEdgePoint).Item1)
                 {
                     addCurrentEdge = true;
                 }
@@ -402,33 +403,6 @@ public class PathFinder(
             return (isReachable, firstObstacle, path);
         });
     }
-    public (bool, (int X, int Y), List<(int X, int Y)>) IsReachableDirectlyOrViaNeighbor((int X, int Y) from, (int X, int Y) target)
-    {
-        // 1. 우선 기존 방법으로 직접 경로가 존재하는지 확인합니다.
-        var directResult = IsReachableDirectly(from, target);
-        if (directResult.Item1)
-        {
-            // 장애물 없이 도착점까지 직선 경로가 존재하면 그대로 반환합니다.
-            return directResult;
-        }
-        
-        // 2. 도착점에 직접 갈 수 없으므로, 도착점의 인접 타일들(neighbor) 중에서 갈 수 있는지 확인합니다.
-        var neighborTiles = GetNeighborTiles(target);
-        foreach (var neighbor in neighborTiles)
-        {
-            // 출발점에서 인접 타일까지 직선 경로를 체크합니다.
-            var neighborResult = IsReachableDirectly(from, neighbor);
-            if (neighborResult.Item1)
-            {
-                // 하나라도 도달 가능한 인접 타일이 있다면, 해당 타일로 도달 가능하다고 판단합니다.
-                return (true, neighbor, neighborResult.Item3);
-            }
-        }
-        
-        // 3. 직접 도달도, 인접 타일을 통한 도달도 불가능한 경우 false를 반환합니다.
-        return (false, (-1, -1), new List<(int X, int Y)>());
-    }
-
     /// <summary>
     /// Returns the adjacent tiles of a given tile.
     /// </summary>
@@ -1688,12 +1662,12 @@ class Program
         start = (7, 3); goal = (300, 300); closed = [];
 
         /** TEST **/
-        start = (17998, 13167); goal = (18040, 13128); closed = [];
-        (int X, int Y) topLeft = (17904, 13040);
-        var filePath = "Assets\\cropped_map.png";
-        Methods.RearrangeTileRange(start, goal, ref tileRangeStart, ref tileRangeEnd);
-        sightRange = 16 * 16; moveRange = 1000; obstacles.Clear(); hitObstacle = (-1, -1);
-        obstacles = Methods.GatherDebugMepData(topLeft, filePath);
+        // start = (17998, 13167); goal = (18040, 13128); closed = [];
+        // (int X, int Y) topLeft = (17904, 13040);
+        // var filePath = "Assets\\cropped_map.png";
+        // Methods.RearrangeTileRange(start, goal, ref tileRangeStart, ref tileRangeEnd);
+        // sightRange = 16 * 16; moveRange = 1000; obstacles.Clear(); hitObstacle = (-1, -1);
+        // obstacles = Methods.GatherDebugMepData(topLeft, filePath);
         /** TEST END **/
 
 
