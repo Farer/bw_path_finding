@@ -54,7 +54,7 @@ For distances within a 10 x 10 range, a more simplified algorithm is applied:
 In this case, the algorithm is simpler but may sometimes perform slower than A*.
 
 ## Branches
-- main : BW algorithm
+- main : BWP algorithm
 - Anya
 - Tangent Bug
 
@@ -62,6 +62,8 @@ In this case, the algorithm is simpler but may sometimes perform slower than A*.
 [Ask HN: Have you ever seen a pathfinding algorithm of this type?](https://news.ycombinator.com/item?id=42608107)
 
 [Research on a new method of pathfinding algorithm for performance improvement](https://blog.breathingworld.com/research-on-a-new-method-of-pathfinding-algorithm-for-performance-improvement/)
+
+[The Birth of the BW Pathfinding Algorithm ( BWP )](https://blog.breathingworld.com/the-birth-of-the-bw-pathfinding-algorithm-bwp/)
 
 ## Projects that use this algorithm
 [Breathing World](https://breathingworld.com)
