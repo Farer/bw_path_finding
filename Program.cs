@@ -1632,9 +1632,23 @@ class Program
         obstacles.Add((291, 298));
         obstacles.Add((291, 299));
 
+        // obstacles = new HashSet<(int X, int Y)>()
+        // {
+        //             (2, 0),                         (6, 0),
+        //             (2, 1),         (4, 1),         (6, 1),
+        //             (2, 2),         (4, 2),         (6, 2),
+        //             (2, 3),         (4, 3),         (6, 3),
+        //                             (4, 4),         (6, 4),
+        //                             (4, 5),         (6, 5),
+        //                             (4, 6),         (6, 6),
+        //                                             (6, 7),
+        //     (1, 8), (2, 8), (3, 8), (4, 8), (5, 8), 
+        // };
+
         var sightRange = 15;
         var moveRange = 15;
         (int X, int Y) tileRangeStart = (0, 0);
+        // (int X, int Y) tileRangeEnd = (15, 15);
         (int X, int Y) tileRangeEnd = (300, 300);
         var closed = new HashSet<(int X, int Y)>();
         var hitObstacle = (-1, -1);
@@ -1646,6 +1660,9 @@ class Program
         start = (7, 3); goal = (200, 200); closed = [];
         start = (7, 3); goal = (250, 250); closed = [];
         start = (7, 3); goal = (300, 300); closed = [];
+
+        // start = (0, 1); goal = (8, 1); closed = [];
+        // start = (5, 7); goal = (8, 1); closed = [];
 
         /** TEST **/
         // start = (17998, 13167); goal = (18040, 13128); closed = [];
